@@ -1,12 +1,9 @@
 ---
-- hosts: ckan
+- name: Install customuserprivileges
+  hosts: ckan
   become: true
   vars:
     ve_dir: /usr/lib/ckan/default/bin
-
-  handlers:
-    - name: reload ckan
-      command: supervisorctl reload
 
   tasks:
     - name: Clone our customuserprivileges plugin repo.
@@ -23,8 +20,6 @@
       ini_file:
         path: /etc/ckan/default/ckan.ini
         section: app:main
-        option: ckan.pluins
-        value: stats text_view image_view recline_view datastore datapusher dvrpc_theme customuserprivileges
+        option: ckan.plugins
+        value: stats text_view image_view recline_view datastore datapusher scheming_datasets customuserprivileges dvrpc_theme dvrpc_package
         backup: true
-      notify:
-        - reload ckan

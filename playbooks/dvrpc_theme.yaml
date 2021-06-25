@@ -1,12 +1,9 @@
 ---
-- hosts: ckan
+- name: Install our custom CKAN theme.
+  hosts: ckan
   become: true
   vars:
     ve_dir: /usr/lib/ckan/default/bin
-
-  handlers:
-    - name: reload ckan
-      command: supervisorctl reload
 
   # this is a private repo. Not sure if I'll be able to use ssh agent forwarding with this - if not,
   # next step would be to look into deploy keys for this (see notes/2021-06-22-2229.md)
@@ -52,8 +49,6 @@
       loop: "{{ ini_content | dict2items }}"
       vars:
         ini_content:
-          ckan.plugins: stats text_view image_view recline_view datastore datapusher dvrpc_theme
+          ckan.plugins: stats text_view image_view recline_view datastore datapusher scheming_datasets dvrpc_theme dvrpc_package
           scheming.dataset_schemas: ckanext.dvrpc_theme:dvrpc_dataset.json
           scheming.presets: ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json
-      notify:
-        - reload ckan

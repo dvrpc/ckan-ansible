@@ -1,5 +1,6 @@
 ---
-- hosts: ckan
+- name: Install ckan_scheming.
+  hosts: ckan
   become: true
 
   tasks:
@@ -14,3 +15,11 @@
         name: /usr/lib/ckan/default/src/ckanext-scheming/
         editable: true
         virtualenv: /usr/lib/ckan/default/
+
+    - name: Add plugin to ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.plugins
+        value: stats text_view image_view recline_view datastore datapusher scheming_datasets
+        backup: true
