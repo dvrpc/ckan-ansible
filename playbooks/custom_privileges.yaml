@@ -1,0 +1,30 @@
+---
+- hosts: ckan
+  become: true
+  vars:
+    ve_dir: /usr/lib/ckan/default/bin
+
+  handlers:
+    - name: reload ckan
+      command: supervisorctl reload
+
+  tasks:
+    - name: Clone our customuserprivileges plugin repo.
+      git:
+        repo: https://github.com/dvrpc/ckanext-customuserprivileges
+        dest: /usr/lib/ckan/default/src/ckanext-customuserprivileges/
+
+    - name: Install the plugin.
+      command:
+        chdir: /usr/lib/ckan/default/src/ckanext-customuserprivileges
+        cmd: "{{ ve_dir }}/python setup.py develop"
+
+    - name: Add plugin to ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.pluins
+        value: stats text_view image_view recline_view datastore datapusher dvrpc_theme customuserprivileges
+        backup: true
+      notify:
+        - reload ckan

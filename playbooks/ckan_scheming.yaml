@@ -1,0 +1,16 @@
+---
+- hosts: ckan
+  become: true
+
+  tasks:
+    - name: Clone ckan_scheming repo.
+      git:
+        repo: https://github.com/ckan/ckanext-scheming/
+        dest: /usr/lib/ckan/default/src/ckanext-scheming/
+        version: release-2.1.0
+
+    - name: Install the plugin.
+      pip:
+        name: /usr/lib/ckan/default/src/ckanext-scheming/
+        editable: true
+        virtualenv: /usr/lib/ckan/default/
