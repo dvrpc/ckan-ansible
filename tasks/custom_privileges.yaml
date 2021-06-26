@@ -1,0 +1,11 @@
+---
+- name: Clone our customuserprivileges plugin repo
+  git:
+    repo: https://github.com/dvrpc/ckanext-customuserprivileges
+    dest: /usr/lib/ckan/default/src/ckanext-customuserprivileges/
+
+- name: Install the plugin
+  pip:
+    name: /usr/lib/ckan/default/src/ckanext-customuserprivileges
+    editable: true
+    virtualenv: "{{ ve_dir }}"

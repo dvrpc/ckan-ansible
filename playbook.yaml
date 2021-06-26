@@ -1,0 +1,70 @@
+---
+- hosts: ckan
+  become: true
+  vars_files: vars/external_vars.yaml
+  vars:
+    ve_dir: /usr/lib/ckan/default
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restart
+        enabled: true
+
+    - name: restart solr
+      service:
+        name: tomcat9
+        state: restarted
+        enabled: true
+
+    - name: reload ckan
+      command: supervisorctl reload
+
+  pre_tasks:
+    - name: Update apt cache
+      apt: update_cache=yes cache_valid_time=3600
+
+    - name: Install packages required for ansible on the remote server
+      block:
+
+        - name: Install system packages
+          apt:
+            name:
+              - python3-pip
+              - acl
+            state: present
+
+        - name: Install psycopg2
+          pip:
+            name:
+              - psycopg2-binary
+              - lxml
+            state: present
+
+  tasks:
+    - name: Install CKAN
+      include_tasks: tasks/base.yaml
+
+    - name: Install ckan_scheming plugin
+      include_tasks: tasks/ckan_scheming.yaml
+
+    - name: Install custom theme plugin
+      include_tasks: tasks/dvrpc_theme.yaml
+
+    - name: Install customuserprivileges plugin
+      include_tasks: tasks/custom_privileges.yaml
+
+    - name: Install showcase plugin
+      include_tasks: tasks/showcase.yaml
+
+    - name: Add plugins to ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.plugins
+        value: stats text_view image_view recline_view datastore datapusher scheming_datasets showcase customuserprivileges dvrpc_theme dvrpc_package
+        backup: true
+
+    - name: Restart it all
+      command: supervisorctl reload

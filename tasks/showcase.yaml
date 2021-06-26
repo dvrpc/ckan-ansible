@@ -1,0 +1,11 @@
+---
+- name: Clone the showcase plugin repo
+  git:
+    repo: https://github.com/ckan/ckanext-showcase
+    dest: /usr/lib/ckan/default/src/ckanext-showcase/
+
+- name: Install the showcase plugin
+  pip:
+    name: /usr/lib/ckan/default/src/ckanext-showcase/
+    editable: true
+    virtualenv: "{{ ve_dir }}"

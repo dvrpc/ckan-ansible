@@ -1,0 +1,269 @@
+---
+- name: Install CKAN required packages
+  apt:
+    name:
+      - libpq5
+      - redis-server
+      - nginx
+      - supervisor
+    state: present
+
+- name: Install the CKAN package
+  apt:
+    deb: https://packaging.ckan.org/python-ckan_2.9-py3-focal_amd64.deb
+
+- name: Install and configure postgres
+  block:
+
+    - name: Install postgres
+      apt:
+        name: postgresql-12
+        state: present
+
+    - name: Create db user
+      become: true
+      become_user: postgres
+      postgresql_user:
+        name: ckan_default
+        password: "{{ ckan_default_db_pass }}"
+
+    - name: Create db
+      become: true
+      become_user: postgres
+      postgresql_db:
+        db: ckan_default
+        owner: ckan_default
+
+    - name: Grant privileges
+      become: true
+      become_user: postgres
+      postgresql_user:
+        db: ckan_default
+        name: ckan_default
+        priv: "ALL"
+
+    - name: Update ckan.ini file to include connection string
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: sqlalchemy.url
+        value: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/ckan_default"
+        backup: true
+
+- name: Install and configure solr
+  block:
+    - name: Install solr
+      apt:
+        name: solr-tomcat
+        state: present
+
+    - name: Change port
+      xml:
+        path: /etc/tomcat9/server.xml
+        xpath: /Server/Service[@name="Catalina"]/Connector
+        value: "8983"
+        attribute: port
+        state: present
+
+    - name: Register variable to check schema.xml file type
+      stat:
+        path: /etc/solr/conf/schema.xml
+      register: default_schema
+
+    - name: Backup default schema file if regular file (not symlink)
+      command: mv /etc/solr/conf/schema.xml /etc/solr/conf/schema.xml.bak
+      when: default_schema.stat.exists and default_schema.stat.isreg
+
+    - name: Symlink to CKAN's schema file
+      file:
+        src: /usr/lib/ckan/default/src/ckan/ckan/config/solr/schema.xml
+        dest: /etc/solr/conf/schema.xml
+        state: link
+
+    - name: Update CKAN ini file for solr setting
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: solr_url
+        value: http://127.0.0.1:8983/solr
+        backup: true
+
+- name: restart solr
+  service:
+    name: tomcat9
+    state: restarted
+    enabled: true
+
+- name: Configure CKAN ini
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: ckan.site_url
+    value: http://localhost:8080
+    backup: true
+
+# TODO: figure out how to make this idempotent
+# - name: Initialize database.
+#   become: true
+#   command: ckan db init
+
+- name: Install Datastore plugin
+  block:
+    - name: Create database
+      postgresql_db:
+        name: datastore_default
+        owner: ckan_default
+      become_user: postgres
+
+    - name: Create database user
+      postgresql_user:
+        name: datastore_default
+        password: "{{ datastore_default_db_pass }}"
+        db: datastore_default
+      become_user: postgres
+
+    - name: Update ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: "{{ item.key }}"
+        value: "{{ item.value }}"
+        backup: true
+      loop: "{{ ini_content | dict2items }}"
+      vars:
+        ini_content:
+          ckan.datastore.write_url: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/datastore_default"
+          ckan.datastore.read_url: "postgresql://datastore_default:{{ datastore_default_db_pass }}@localhost/datastore_default"
+  notify:
+    - reload ckan
+
+- name: Configure filestore
+  block:
+    - name: Create directory
+      file:
+        path: /var/lib/ckan/default
+        state: directory
+        mode: 0774
+
+    - name: Update ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.storage_path
+        value: /var/lib/ckan/default
+        backup: true
+  notify:
+    - reload ckan
+
+
+- name: Configure datapusher
+  block:
+    - name: Install psycopg2 in datapusher virtual environment
+      pip:
+        virtualenv: /usr/lib/ckan/datapusher
+        name: psycopg2-binary
+
+    - name: Create database user
+      postgresql_user:
+        name: datapusher_jobs
+        password: "{{ datapusher_jobs_db_pass }}"
+      become_user: postgres
+
+    - name: Create database
+      postgresql_db:
+        name: datapusher_jobs
+        owner: datapusher_jobs
+      become_user: postgres
+
+    - name: Update ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: "{{ item.key }}"
+        value: "{{ item.value }}"
+        backup: true
+      loop: "{{ ini_content | dict2items }}"
+      vars:
+        ini_content:
+          ckan.datapusher.url: http://127.0.0.1:8800
+          ckan.datapusher.formats: csv xls xlsx tsv application/csv application/vnd.ms-excel application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+    - name: Update datapusher_settings.py
+      ini_file:
+        path: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher_settings.py
+        section: null
+        option: "{{ item.key }}"
+        value: "{{ item.value }}"
+        backup: true
+      loop: "{{ ini_content | dict2items }}"
+      vars:
+        ini_content:
+          HOST: http://127.0.0.1
+          PORT: 8800
+          SQLALCHEMY_DATABASE_URI: '"postgresql://datapusher_jobs:{{ datapusher_jobs_db_pass }}@localhost/datapusher_jobs"'
+          MAX_CONTENT_LENGTH: 52428800
+
+    - name: Configure better performance
+      ini_file:
+        path: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher-uwsgi.ini
+        section: uwsgi
+        option: "{{ item.key }}"
+        value: "{{ item.value }}"
+        backup: true
+      loop: "{{ ini_content | dict2items }}"
+      vars:
+        ini_content:
+          workers: 3
+          threads: 3
+          lazy-apps: true
+
+    - name: Update supervisor to use the configuration file we just edited
+      ini_file:
+        path: /etc/supervisor/conf.d/ckan-datapusher.conf
+        section: program:ckan-datapusher
+        option: command
+        value: /usr/lib/ckan/datapusher/bin/uwsgi -i /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher-uwsgi.ini
+        no_extra_spaces: true
+
+- name: Update plugins in ckan.ini
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: ckan.plugins
+    value: stats text_view image_view recline_view datastore datapusher
+    backup: true
+
+# - name: Update ckan_default and datastore_default db permissions via script
+#   command: "ckan -c /etc/ckan/default/ckan.ini datastore set-permissions"
+
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+    enabled: true
+
+# NOTE: this may need to be removed/run only under certain conditions
+- name: Start/reload supervisor.
+  command: supervisorctl reload
+
+- name: Create sysadmin
+  block:
+    - name: Register output of user list command
+      command: ckan -c /etc/ckan/default/ckan.ini user list
+      register: user_list
+
+    - name: Register output of sysadmin list command
+      command: ckan -c /etc/ckan/default/ckan.ini sysadmin list
+      register: sysadmin_list
+
+    - name: Create user
+      expect:
+        command: "ckan -c /etc/ckan/default/ckan.ini user add {{ sysadmin }} email={{ sysadmin_email }} name={{ sysadmin }}"
+        responses:
+          "Password ": "{{ sysadmin_pass }}"
+          "Repeat for confirmation": "{{ sysadmin_pass }}"
+      when: sysadmin not in user_list.stdout
+
+    - name: Make that user a sysadmin
+      command: ckan -c /etc/ckan/default/ckan.ini sysadmin add "{{ sysadmin }}"
+      when: sysadmin not in sysadmin_list.stdout

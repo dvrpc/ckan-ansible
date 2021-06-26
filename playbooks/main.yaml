@@ -1,5 +1,0 @@
----
-- import_playbook: base.yaml
-- import_playbook: ckan_scheming.yaml
-- import_playbook: dvrpc_theme.yaml
-- import_playbook: custom_privileges.yaml
