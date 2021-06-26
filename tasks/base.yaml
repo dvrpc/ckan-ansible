@@ -103,9 +103,9 @@
     backup: true
 
 # TODO: figure out how to make this idempotent
-# - name: Initialize database.
-#   become: true
-#   command: ckan db init
+- name: Initialize database.
+  become: true
+  command: ckan db init
 
 - name: Install Datastore plugin
   block:
@@ -233,8 +233,8 @@
     value: stats text_view image_view recline_view datastore datapusher
     backup: true
 
-# - name: Update ckan_default and datastore_default db permissions via script
-#   command: "ckan -c /etc/ckan/default/ckan.ini datastore set-permissions"
+- name: Update ckan_default and datastore_default db permissions via script
+  command: "ckan -c /etc/ckan/default/ckan.ini datastore set-permissions"
 
 - name: restart nginx
   service:

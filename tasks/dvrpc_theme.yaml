@@ -30,9 +30,9 @@
     path: /etc/solr/conf/schema.xml
     xpath: /schema/fields/field
     insertafter: true
-    addchildren:
-      # 'name="category" type="string" indexed="true" stored="false" multiValued="true"'
-      'name="attempt5" type="string" indexed="true" stored="false" multiValued="true"'
+    input_type: xml
+    add_children:
+      <field name="category" type="string" indexed="true" stored="false" multiValued="true"/>
   notify: restart solr
 
 - name: Update ckan.ini (excluding plugin list)
