@@ -25,15 +25,23 @@
     editable: true
     virtualenv: "{{ ve_dir }}"
 
-- name: Update the solr schema to indicate that category field is multi-value
-  xml:
-    path: /etc/solr/conf/schema.xml
-    xpath: /schema/fields/field
-    insertafter: true
-    input_type: xml
-    add_children:
-      <field name="category" type="string" indexed="true" stored="false" multiValued="true"/>
-  notify: restart solr
+- name: Update the solr schema to indicate that category field is multi value
+  block:
+    - name: Check if we've already added category field to schema
+      xml:
+        path: /etc/solr/conf/schema.xml
+        xpath: /schema/fields/field[@name="category"]
+        content: attribute
+  rescue:
+    - name: If previous task failed, it does not yet exist; add it
+      xml:
+        path: /etc/solr/conf/schema.xml
+        xpath: /schema/fields/field
+        insertafter: true
+        input_type: xml
+        add_children:
+          <field name="category" type="string" indexed="true" stored="false" multiValued="true"/>
+      notify: restart solr
 
 - name: Update ckan.ini (excluding plugin list)
   ini_file:
