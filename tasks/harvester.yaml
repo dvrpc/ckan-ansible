@@ -1,0 +1,103 @@
+---
+- name: Install and configure ckanext-harvest plugin
+  block:
+    - name: Clone harvest plugin repo
+      git:
+        repo: https://www.github.com/ckan/ckanext-harvest
+        dest: /usr/lib/ckan/default/src/ckanext-harvest/
+
+    - name: Install the plugin
+      pip:
+        name: /usr/lib/ckan/default/src/ckanext-harvest/
+        editable: true
+        virtualenv: "{{ ve_dir }}"
+
+    - name: Install its requirements
+      pip:
+        chdir: /usr/lib/ckan/default/src/ckanext-harvest/
+        requirements: pip-requirements.txt
+        virtualenv: "{{ ve_dir }}"
+
+    - name: Install redis
+      apt:
+        name: redis-server
+        state: present
+
+    - name: Set backend type
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.harvest.mq.type
+        value: redis
+        backup: true
+
+    - name: Add plugins to ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.plugins
+        value: stats text_view image_view recline_view datastore datapusher showcase customuserprivileges dvrpc_theme dvrpc_package scheming_datasets harvest ckan_harvester
+        backup: true
+
+    - name: Set up harvester db.
+      command: /usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini harvester initdb
+
+- name: Install and configure ckanext-dcat plugin
+  block:
+    - name: Clone plugin repo
+      git:
+        repo: https://github.com/ckan/ckanext-dcat
+        dest: /usr/lib/ckan/default/src/ckanext-dcat/
+
+    - name: Install the plugin
+      pip:
+        name: /usr/lib/ckan/default/src/ckanext-dcat/
+        editable: true
+        virtualenv: "{{ ve_dir }}"
+
+    - name: Install its requirements
+      pip:
+        chdir: /usr/lib/ckan/default/src/ckanext-dcat/
+        requirements: requirements.txt
+        virtualenv: "{{ ve_dir }}"
+
+    - name: Add plugins to ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.plugins
+        value: stats text_view image_view recline_view datastore datapusher showcase customuserprivileges dvrpc_theme dvrpc_package scheming_datasets harvest ckan_harvester dcat dcat_rdf_harvester dcat_json_harvester dcat_json_interface structured_data
+        backup: true
+
+    - name: Upload harvesting conf file
+      copy:
+        src: files/ckan_harvesting.conf
+        dest: /etc/supervisor/conf.d/
+
+    - name: Start the supervisor harvester tasks.
+      block:
+        - command: sudo supervisorctl reread
+        - command: sudo supervisorctl add ckan_gather_consumer
+        - command: sudo supervisorctl add ckan_fetch_consumer
+        - command: sudo supervisorctl start ckan_gather_consumer
+        - command: sudo supervisorctl start ckan_fetch_consumer
+
+- name: Install and configure DVRPC custom profile
+  block:
+    - name: Clone plugin repo
+      git:
+        repo: https://github.com/dvrpc/ckanext-dvrpc_gis_harvester
+        dest: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
+
+    - name: Install the plugin
+      pip:
+        name: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
+        editable: true
+        virtualenv: "{{ ve_dir }}"
+
+    - name: Add profile to ckan.ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckanext.dcat.rdf.profiles
+        value: euro_dcat_ap gis_profile

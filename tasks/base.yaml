@@ -102,10 +102,19 @@
     value: http://localhost:8080
     backup: true
 
-# TODO: figure out how to make this idempotent
+
+- name: Register var to check if db tables already created
+  postgresql_query:
+    db: ckan_default
+    login_user: ckan_default
+    login_password: "{{ ckan_default_db_pass }}"
+    login_host: localhost
+    query: "SELECT EXISTS ( SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user');"
+  register: tables_created
+
 - name: Initialize database.
-  become: true
-  command: ckan db init
+  command: /usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini db init
+  when: tables_created.query_result.0.exists == false
 
 - name: Install Datastore plugin
   block:

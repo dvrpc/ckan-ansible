@@ -1,4 +1,7 @@
 ---
+# TODO: add the cronjobs on the harvest tasks.yaml file
+
+
 - hosts: ckan
   become: true
   vars_files: vars/external_vars.yaml
@@ -9,7 +12,7 @@
     - name: restart nginx
       service:
         name: nginx
-        state: restart
+        state: restarted
         enabled: true
 
     - name: restart solr
@@ -58,13 +61,16 @@
     - name: Install showcase plugin
       include_tasks: tasks/showcase.yaml
 
-    - name: Add plugins to ckan.ini
+    - name: Add above plugins to ckan.ini
       ini_file:
         path: /etc/ckan/default/ckan.ini
         section: app:main
         option: ckan.plugins
-        value: stats text_view image_view recline_view datastore datapusher scheming_datasets showcase customuserprivileges dvrpc_theme dvrpc_package
+        value: stats text_view image_view recline_view datastore datapusher showcase customuserprivileges dvrpc_theme dvrpc_package scheming_datasets
         backup: true
+
+    - name: Install harvester plugins
+      include_tasks: tasks/harvester.yaml
 
     - name: Restart it all
       command: supervisorctl reload
