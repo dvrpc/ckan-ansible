@@ -31,6 +31,14 @@
         value: redis
         backup: true
 
+    - name: Set redis url
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.redis.url
+        value: redis://localhost:6379/0
+        backup: true
+
     - name: Add plugins to ckan.ini
       ini_file:
         path: /etc/ckan/default/ckan.ini

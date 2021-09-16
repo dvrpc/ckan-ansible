@@ -194,23 +194,13 @@
       loop: "{{ ini_content | dict2items }}"
       vars:
         ini_content:
-          ckan.datapusher.url: http://127.0.0.1:8800
+          ckan.datapusher.url: "http://127.0.0.1:8800"
           ckan.datapusher.formats: csv xls xlsx tsv application/csv application/vnd.ms-excel application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
     - name: Update datapusher_settings.py
-      ini_file:
-        path: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher_settings.py
-        section: null
-        option: "{{ item.key }}"
-        value: "{{ item.value }}"
-        backup: true
-      loop: "{{ ini_content | dict2items }}"
-      vars:
-        ini_content:
-          HOST: http://127.0.0.1
-          PORT: 8800
-          SQLALCHEMY_DATABASE_URI: '"postgresql://datapusher_jobs:{{ datapusher_jobs_db_pass }}@localhost/datapusher_jobs"'
-          MAX_CONTENT_LENGTH: 52428800
+      template:
+        src: datapuhser_settings.py.j2
+        dest: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher_settings.py
 
     - name: Configure better performance
       ini_file:
