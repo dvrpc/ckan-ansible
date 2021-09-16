@@ -143,6 +143,9 @@
         ini_content:
           ckan.datastore.write_url: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/datastore_default"
           ckan.datastore.read_url: "postgresql://datastore_default:{{ datastore_default_db_pass }}@localhost/datastore_default"
+
+    - name: Create tables and set permissions
+      shell: ckan -c /etc/ckan/default/ckan.ini datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1
   notify:
     - reload ckan
 
@@ -199,8 +202,9 @@
 
     - name: Update datapusher_settings.py
       template:
-        src: datapuhser_settings.py.j2
+        src: datapusher_settings.py.j2
         dest: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher_settings.py
+        mode: 0644
 
     - name: Configure better performance
       ini_file:
@@ -209,6 +213,7 @@
         option: "{{ item.key }}"
         value: "{{ item.value }}"
         backup: true
+        mode: 0644
       loop: "{{ ini_content | dict2items }}"
       vars:
         ini_content:

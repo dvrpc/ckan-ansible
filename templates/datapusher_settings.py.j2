@@ -9,13 +9,13 @@ PASSWORD = str(uuid.uuid4())
 NAME = 'datapusher'
 
 # database
-SQLALCHEMY_DATABASE_URI = '"postgresql://datapusher_jobs:{{ datapusher_jobs_db_pass }}@localhost/datapusher_jobs"'
+SQLALCHEMY_DATABASE_URI = 'postgresql://datapusher_jobs:{{ datapusher_jobs_db_pass }}@localhost/datapusher_jobs'
 
 # filesize
 MAX_CONTENT_LENGTH = 52428800
 
 # webserver host and port
-HOST = '"http://127.0.0.1"'
+HOST = 'http://127.0.0.1'
 PORT = 8800
 
 # logging
