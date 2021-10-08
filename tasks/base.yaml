@@ -80,6 +80,27 @@
         dest: /etc/solr/conf/schema.xml
         state: link
 
+    - name: Register var to check if category already added
+      xml:
+        path: /etc/solr/conf/schema.xml
+        xpath: /schema/fields/field[@name="category"]
+        count: true
+      register: category_field
+
+    - name: Make Category a multi-value field
+      xml:
+        path: /etc/solr/conf/schema.xml
+        xpath: /schema/fields
+        add_children:
+          - field:
+              name: "category"
+              type: "string"
+              indexed: "true"
+              stored: "true"
+              multiValued: "true"
+        pretty_print: true
+      when: category_field.count < 1
+
     - name: Update CKAN ini file for solr setting
       ini_file:
         path: /etc/ckan/default/ckan.ini
