@@ -103,3 +103,20 @@
       supervisorctl:
         name: ckan_fetch_consumer
         state: present
+
+- name: Set up cronjobs
+  block:
+    - name: Check for pending harvester jobs hourly
+      cron:
+        name: "Check pending harvester jobs"
+        minute: "10"
+        job: "/usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini harvester run"
+        user: root
+
+    - name: Clean up harvester jobs once per day
+      cron:
+        name: "Clean up harvester jobs"
+        minute: 20
+        hour: 23
+        job: "/usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini harvester clean_harvest_log"
+        user: root
