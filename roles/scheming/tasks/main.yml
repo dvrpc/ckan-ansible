@@ -4,9 +4,18 @@
     repo: https://github.com/ckan/ckanext-scheming/
     dest: /usr/lib/ckan/default/src/ckanext-scheming/
     version: release-2.1.0
+  register: repo
 
 - name: Install the plugin
   pip:
     name: /usr/lib/ckan/default/src/ckanext-scheming/
     editable: true
     virtualenv: "{{ ve_dir }}"
+  when: repo.changed
+
+- name: Add plugin to ckan.ini
+  lineinfile:
+    path: /etc/ckan/default/ckan.ini
+    backrefs: true
+    regexp: "^(.*ckan.plugins = .*)$"
+    line: '\1 scheming_datasets'

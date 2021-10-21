@@ -44,17 +44,9 @@
             state: present
   roles:
     - base
-    - scheming
-    - dvrpc_theme
     - custom_privileges
+    - dvrpc_theme
     - showcases
+    - scheming
     - harvest
-
-# this the list of plugins I had as one of the lasts tasks in the old structure
-# - name: Add above plugins to ckan.ini
-#   ini_file:
-#     path: /etc/ckan/default/ckan.ini
-#     section: app:main
-#     option: ckan.plugins
-#     value: stats text_view image_view recline_view datastore datapusher customuserprivileges dvrpc_theme dvrpc_package showcase scheming_datasets
-#     backup: true
+    - dvrpc_gis_harvester

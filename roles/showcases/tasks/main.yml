@@ -3,9 +3,18 @@
   git:
     repo: https://github.com/ckan/ckanext-showcase
     dest: /usr/lib/ckan/default/src/ckanext-showcase/
+  register: repo
 
 - name: Install the showcase plugin
   pip:
     name: /usr/lib/ckan/default/src/ckanext-showcase/
     editable: true
     virtualenv: "{{ ve_dir }}"
+  when: repo.changed
+
+- name: Add plugin to ckan.ini
+  lineinfile:
+    path: /etc/ckan/default/ckan.ini
+    backrefs: true
+    regexp: "^(.*ckan.plugins = .*)$"
+    line: '\1 showcase'

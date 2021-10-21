@@ -115,7 +115,7 @@
 
 - name: Initialize database
   command: /usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini db init
-  when: tables_created.query_result.0.exists == false
+  when: not tables_created.query_result.0.exists
 
 - name: Install Datastore plugin
   block:
@@ -249,10 +249,12 @@
     - name: Register output of user list command
       command: ckan -c /etc/ckan/default/ckan.ini user list
       register: user_list
+      changed_when: false
 
     - name: Register output of sysadmin list command
       command: ckan -c /etc/ckan/default/ckan.ini sysadmin list
       register: sysadmin_list
+      changed_when: false
 
     - name: Create user
       expect:

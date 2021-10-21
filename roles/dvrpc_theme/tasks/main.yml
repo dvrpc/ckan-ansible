@@ -18,12 +18,14 @@
     dest: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
     accept_hostkey: true
     key_file: /ssh_keys/ckan_dvrpc_theme_repo
+  register: repo
 
 - name: Install the plugin
   pip:
     name: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
     editable: true
     virtualenv: "{{ ve_dir }}"
+  when: repo.changed
 
 - name: Register var to check if category already added
   xml:
@@ -57,3 +59,10 @@
   loop:
     - {option: "scheming.dataset_schemas", value: "ckanext.dvrpc_theme:dvrpc_dataset.json"}
     - {option: "scheming.presets", value: "ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json"}
+
+- name: Add plugin to ckan.ini
+  lineinfile:
+    path: /etc/ckan/default/ckan.ini
+    backrefs: true
+    regexp: "^(.*ckan.plugins = .*)$"
+    line: '\1 dvrpc_theme dvrpc_package'
