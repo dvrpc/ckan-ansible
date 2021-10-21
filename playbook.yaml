@@ -1,10 +1,8 @@
 ---
 # TODO: add the cronjobs on the harvest tasks.yaml file
 
-
 - hosts: ckan
   become: true
-  vars_files: vars/external_vars.yaml
   vars:
     ve_dir: /usr/lib/ckan/default
 
@@ -44,33 +42,19 @@
               - psycopg2-binary
               - lxml
             state: present
+  roles:
+    - base
+    - scheming
+    - dvrpc_theme
+    - custom_privileges
+    - showcases
+    - harvest
 
-  tasks:
-    - name: Install CKAN
-      include_tasks: tasks/base.yaml
-
-    - name: Install ckan_scheming plugin
-      include_tasks: tasks/ckan_scheming.yaml
-
-    - name: Install custom theme plugin
-      include_tasks: tasks/dvrpc_theme.yaml
-
-    - name: Install customuserprivileges plugin
-      include_tasks: tasks/custom_privileges.yaml
-
-    - name: Install showcase plugin
-      include_tasks: tasks/showcase.yaml
-
-    - name: Add above plugins to ckan.ini
-      ini_file:
-        path: /etc/ckan/default/ckan.ini
-        section: app:main
-        option: ckan.plugins
-        value: stats text_view image_view recline_view datastore datapusher showcase customuserprivileges dvrpc_theme dvrpc_package scheming_datasets
-        backup: true
-
-    - name: Install harvester plugins
-      include_tasks: tasks/harvester.yaml
-
-    - name: Restart it all
-      command: supervisorctl reload
+# this the list of plugins I had as one of the lasts tasks in the old structure
+# - name: Add above plugins to ckan.ini
+#   ini_file:
+#     path: /etc/ckan/default/ckan.ini
+#     section: app:main
+#     option: ckan.plugins
+#     value: stats text_view image_view recline_view datastore datapusher customuserprivileges dvrpc_theme dvrpc_package showcase scheming_datasets
+#     backup: true

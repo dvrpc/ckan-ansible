@@ -1,0 +1,8 @@
+galaxy_info:
+  author: Kris Warner
+  description: Install showcases plugin
+  company: DVRPC
+  license: GPL-2.0-only
+  min_ansible_version: 2.9
+  galaxy_tags: []
+dependencies: []

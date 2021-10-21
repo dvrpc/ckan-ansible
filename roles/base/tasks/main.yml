@@ -1,4 +1,5 @@
 ---
+# tasks to install CKAN with only base plugins (datastore, filestore, datapusher)
 - name: Install CKAN required packages
   apt:
     name:
@@ -80,27 +81,6 @@
         dest: /etc/solr/conf/schema.xml
         state: link
 
-    - name: Register var to check if category already added
-      xml:
-        path: /etc/solr/conf/schema.xml
-        xpath: /schema/fields/field[@name="category"]
-        count: true
-      register: category_field
-
-    - name: Make Category a multi-value field
-      xml:
-        path: /etc/solr/conf/schema.xml
-        xpath: /schema/fields
-        add_children:
-          - field:
-              name: "category"
-              type: "string"
-              indexed: "true"
-              stored: "true"
-              multiValued: "true"
-        pretty_print: true
-      when: category_field.count < 1
-
     - name: Update CKAN ini file for solr setting
       ini_file:
         path: /etc/ckan/default/ckan.ini
@@ -109,11 +89,12 @@
         value: http://127.0.0.1:8983/solr
         backup: true
 
-- name: restart solr
-  service:
-    name: tomcat9
-    state: restarted
-    enabled: true
+    - name: Give group write permissions to /var/log/tomcat9 to avoid errors
+      file:
+        path: /var/log/tomcat9
+        recurse: true
+        mode: 0775
+  notify: restart solr
 
 - name: Configure CKAN ini
   ini_file:
@@ -122,7 +103,6 @@
     option: ckan.site_url
     value: http://localhost:8080
     backup: true
-
 
 - name: Register var to check if db tables already created
   postgresql_query:
@@ -133,7 +113,7 @@
     query: "SELECT EXISTS ( SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user');"
   register: tables_created
 
-- name: Initialize database.
+- name: Initialize database
   command: /usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini db init
   when: tables_created.query_result.0.exists == false
 
@@ -167,8 +147,7 @@
 
     - name: Create tables and set permissions
       shell: ckan -c /etc/ckan/default/ckan.ini datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1
-  notify:
-    - reload ckan
+  notify: reload ckan
 
 - name: Configure filestore
   block:
@@ -185,8 +164,7 @@
         option: ckan.storage_path
         value: /var/lib/ckan/default
         backup: true
-  notify:
-    - reload ckan
+  notify: reload ckan
 
 
 - name: Configure datapusher
@@ -249,6 +227,7 @@
         option: command
         value: /usr/lib/ckan/datapusher/bin/uwsgi -i /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher-uwsgi.ini
         no_extra_spaces: true
+  notify: reload ckan
 
 - name: Update plugins in ckan.ini
   ini_file:
@@ -257,19 +236,13 @@
     option: ckan.plugins
     value: stats text_view image_view recline_view datastore datapusher
     backup: true
+  notify: reload ckan
 
 - name: Update ckan_default and datastore_default db permissions via script
   command: "ckan -c /etc/ckan/default/ckan.ini datastore set-permissions"
-
-- name: restart nginx
-  service:
-    name: nginx
-    state: restarted
-    enabled: true
-
-# NOTE: this may need to be removed/run only under certain conditions
-- name: Start/reload supervisor.
-  command: supervisorctl reload
+  notify:
+    - restart nginx
+    - reload ckan
 
 - name: Create sysadmin
   block:
@@ -292,3 +265,4 @@
     - name: Make that user a sysadmin
       command: ckan -c /etc/ckan/default/ckan.ini sysadmin add "{{ sysadmin }}"
       when: sysadmin not in sysadmin_list.stdout
+  notify: reload ckan

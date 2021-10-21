@@ -1,0 +1,59 @@
+---
+- name: Create directory to put ssh keys into
+  file:
+    path: /ssh_keys
+    state: directory
+    mode: 0755
+
+# the public key was added to the repo's deploy keys
+- name: Copy private ssh deploy key to server
+  copy:
+    src: files/ckan_dvrpc_theme_repo
+    dest: /ssh_keys/ckan_dvrpc_theme_repo
+    mode: 0600
+
+- name: Clone our theme plugin repo
+  git:
+    repo: git@github.com:dvrpc/ckanext-dvrpc_theme
+    dest: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
+    accept_hostkey: true
+    key_file: /ssh_keys/ckan_dvrpc_theme_repo
+
+- name: Install the plugin
+  pip:
+    name: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
+    editable: true
+    virtualenv: "{{ ve_dir }}"
+
+- name: Register var to check if category already added
+  xml:
+    path: /etc/solr/conf/schema.xml
+    xpath: /schema/fields/field[@name="category"]
+    count: true
+  register: category_field
+
+- name: Make category a multi-value field
+  xml:
+    path: /etc/solr/conf/schema.xml
+    xpath: /schema/fields
+    add_children:
+      - field:
+          name: "category"
+          type: "string"
+          indexed: "true"
+          stored: "true"
+          multiValued: "true"
+    pretty_print: true
+  when: category_field.count < 1
+  notify: restart solr
+
+- name: Update ckan.ini (excluding plugin list)
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    backup: true
+  loop:
+    - {option: "scheming.dataset_schemas", value: "ckanext.dvrpc_theme:dvrpc_dataset.json"}
+    - {option: "scheming.presets", value: "ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json"}

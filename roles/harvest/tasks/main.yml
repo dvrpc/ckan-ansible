@@ -77,35 +77,15 @@
         value: stats text_view image_view recline_view datastore datapusher showcase customuserprivileges dvrpc_theme dvrpc_package scheming_datasets harvest ckan_harvester dcat dcat_rdf_harvester dcat_json_harvester dcat_json_interface structured_data
         backup: true
 
-    - name: Upload harvesting conf file
-      copy:
-        src: files/ckan_harvesting.conf
-        dest: /etc/supervisor/conf.d/
+- name: Upload harvesting conf file
+  copy:
+    src: files/ckan_harvesting.conf
+    dest: /etc/supervisor/conf.d/
 
-    - name: Start the supervisor harvester tasks.
-      block:
-        - command: sudo supervisorctl reread
-        - command: sudo supervisorctl add ckan_gather_consumer
-        - command: sudo supervisorctl add ckan_fetch_consumer
-        - command: sudo supervisorctl start ckan_gather_consumer
-        - command: sudo supervisorctl start ckan_fetch_consumer
-
-- name: Install and configure DVRPC custom profile
+- name: Start the supervisor harvester tasks.
   block:
-    - name: Clone plugin repo
-      git:
-        repo: https://github.com/dvrpc/ckanext-dvrpc_gis_harvester
-        dest: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
-
-    - name: Install the plugin
-      pip:
-        name: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
-        editable: true
-        virtualenv: "{{ ve_dir }}"
-
-    - name: Add profile to ckan.ini
-      ini_file:
-        path: /etc/ckan/default/ckan.ini
-        section: app:main
-        option: ckanext.dcat.rdf.profiles
-        value: euro_dcat_ap gis_profile
+    - command: sudo supervisorctl reread
+    - command: sudo supervisorctl add ckan_gather_consumer
+    - command: sudo supervisorctl add ckan_fetch_consumer
+    - command: sudo supervisorctl start ckan_gather_consumer
+    - command: sudo supervisorctl start ckan_fetch_consumer
