@@ -1,6 +1,4 @@
 ---
-# TODO: add the cronjobs on the harvest tasks.yaml file
-
 - hosts: ckan
   become: true
   vars:

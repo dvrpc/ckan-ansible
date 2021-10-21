@@ -2,9 +2,9 @@
 - name: Restart ckan_gather_consumer
   supervisorctl:
     name: ckan_gather_consumer
-    start: restarted
+    state: restarted
 
 - name: Restart ckan_fetch_consumer
   supervisorctl:
     name: ckan_fetch_consumer
-    start: restarted
+    state: restarted
