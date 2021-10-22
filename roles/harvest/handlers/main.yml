@@ -1,10 +1,10 @@
 # handlers for the harvest role
-- name: Restart ckan_gather_consumer
+- name: restart ckan_gather_consumer
   supervisorctl:
     name: ckan_gather_consumer
     state: restarted
 
-- name: Restart ckan_fetch_consumer
+- name: restart ckan_fetch_consumer
   supervisorctl:
     name: ckan_fetch_consumer
     state: restarted
