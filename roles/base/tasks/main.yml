@@ -248,6 +248,7 @@
 
 - name: Create sysadmin
   block:
+
     - name: Register output of user list command
       command: ckan -c /etc/ckan/default/ckan.ini user list
       register: user_list
@@ -270,3 +271,60 @@
       command: ckan -c /etc/ckan/default/ckan.ini sysadmin add "{{ sysadmin }}"
       when: sysadmin not in sysadmin_list.stdout
   notify: reload ckan
+
+# https://docs.ckan.org/en/2.9/maintaining/tracking.html
+- name: Add page view tracking, including email notification
+  block:
+    - name: Add setting to ckan ini
+      ini_file:
+        path: /etc/ckan/default/ckan.ini
+        section: app:main
+        option: ckan.tracking_enabled
+        value: "true"
+      notify: reload ckan
+
+    - name: Create cronjob for tracking
+      cron:
+        name: "Update tracking summary data"
+        minute: "0"
+        hour: "4"
+        job: "ckan -c /etc/ckan/default/ckan.ini tracking update && ckan -c /etc/ckan/default/ckan.ini search-index rebuild -r"
+        user: root
+
+    - name: Add script to get top 10 most viewed datasets
+      template:
+        src: dataset_tracking_total.sh
+        dest: ~/dataset_tracking_total.sh
+        mode: 0755
+      become: true
+      become_user: postgres
+
+    - name: Add script to get top 10 most recently viewed datasets
+      template:
+        src: dataset_tracking_recent.sh
+        dest: ~/dataset_tracking_recent.sh
+        mode: 0755
+      become: true
+      become_user: postgres
+
+    - name: Create cronjob for running dataset_track_total.sh
+      cron:
+        name: "Get top 10 most viewed datasets and email results"
+        minute: "10"
+        hour: "4"
+        day: "15"
+        job: ~/dataset_tracking_total.sh
+        user: postgres
+      become: true
+      become_user: postgres
+
+    - name: Create cronjob for running dataset_track_recent.sh
+      cron:
+        name: "Get top 10 most recently viewed datasets and email results"
+        minute: "10"
+        hour: "4"
+        day: "15"
+        job: ~/dataset_tracking_recent.sh
+        user: postgres
+      become: true
+      become_user: postgres
