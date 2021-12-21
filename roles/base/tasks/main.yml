@@ -236,7 +236,16 @@
     path: /etc/ckan/default/ckan.ini
     section: app:main
     option: ckan.plugins
-    value: stats text_view image_view recline_view datastore datapusher
+    value: stats text_view datatables_view image_view webpage_view datastore datapusher resource_proxy
+    backup: true
+  notify: reload ckan
+
+- name: Define default resource views
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: ckan.views.default_views
+    value: image_view text_view datatables_view
     backup: true
   notify: reload ckan
 
