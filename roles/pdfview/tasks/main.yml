@@ -1,0 +1,30 @@
+---
+# tasks to install the ckanext-pdfview plugin
+- name: Clone the plugin repo
+  git:
+    repo: https://github.com/ckan/ckanext-pdfview
+    dest: /usr/lib/ckan/default/src/ckanext-pdfview/
+  register: repo
+
+- name: Install the plugin
+  pip:
+    name: /usr/lib/ckan/default/src/ckanext-pdfview/
+    editable: true
+    virtualenv: "{{ ve_dir }}"
+  when: repo.changed
+
+- name: Add plugin to ckan.ini
+  lineinfile:
+    path: /etc/ckan/default/ckan.ini
+    backrefs: true
+    regexp: "^(.*ckan.plugins = .*)$"
+    line: '\1 pdf_view'
+
+- name: Add to default resource views
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: ckan.views.default_views
+    value: image_view text_view datatables_view pdf_view
+    backup: true
+  notify: reload ckan

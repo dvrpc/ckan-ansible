@@ -1,0 +1,31 @@
+---
+# tasks to install the ckanext-geoview plugin
+- name: Clone the plugin repo
+  git:
+    repo: https://github.com/ckan/ckanext-geoview.git
+    dest: /usr/lib/ckan/default/src/ckanext-geoview/
+  register: repo
+
+- name: Install the plugin
+  pip:
+    name: /usr/lib/ckan/default/src/ckanext-geoview/
+    editable: true
+    virtualenv: "{{ ve_dir }}"
+  when: repo.changed
+
+# multiple plugins come with this repo, we're interested in geojson_view
+- name: Add plugin to ckan.ini
+  lineinfile:
+    path: /etc/ckan/default/ckan.ini
+    backrefs: true
+    regexp: "^(.*ckan.plugins = .*)$"
+    line: '\1 geojson_view'
+
+- name: Add to default resource views
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: ckan.views.default_views
+    value: image_view text_view datatables_view pdf_view geojson_view
+    backup: true
+  notify: reload ckan
