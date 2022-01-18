@@ -20,6 +20,7 @@
     backrefs: true
     regexp: "^(.*ckan.plugins = .*)$"
     line: '\1 geojson_view'
+  notify: reload ckan
 
 - name: Add to default resource views
   ini_file:
