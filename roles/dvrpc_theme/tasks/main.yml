@@ -57,7 +57,7 @@
     value: "{{ item.value }}"
     backup: true
   loop:
-    - {option: "scheming.dataset_schemas", value: "ckanext.dvrpc_theme:dvrpc_dataset.json"}
+    - {option: "scheming.dataset_schemas", value: "ckanext.dvrpc_theme:dvrpc_dataset.yaml"}
     - {option: "scheming.presets", value: "ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json"}
 
 - name: Add plugin to ckan.ini
