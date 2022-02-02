@@ -45,7 +45,7 @@
     - base
     - custom_privileges
     - dvrpc_theme
-    - showcases
+    # showcases
     - scheming
     - harvest
     - dvrpc_gis_harvester
