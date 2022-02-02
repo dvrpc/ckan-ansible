@@ -127,6 +127,7 @@
         name: datastore_default
         owner: ckan_default
       become_user: postgres
+      register: datastore_database
 
     - name: Create database user
       postgresql_user:
@@ -150,6 +151,7 @@
 
     - name: Create tables and set permissions
       shell: ckan -c /etc/ckan/default/ckan.ini datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1
+      when: datastore_database.changed
   notify: reload ckan
 
 - name: Configure filestore
