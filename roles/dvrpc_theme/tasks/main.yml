@@ -59,6 +59,7 @@
   loop:
     - {option: "scheming.dataset_schemas", value: "ckanext.dvrpc_theme:dvrpc_dataset.yaml"}
     - {option: "scheming.presets", value: "ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json"}
+    - {option: "licenses_group_url", value: "{{ license_url }}"}
 
 - name: Add plugin to ckan.ini
   lineinfile:
