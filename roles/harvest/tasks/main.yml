@@ -5,7 +5,7 @@
       git:
         repo: https://www.github.com/ckan/ckanext-harvest
         dest: /usr/lib/ckan/default/src/ckanext-harvest/
-      register: harvest_repo
+      register: repo
       notify:
         - restart ckan_gather_consumer
         - restart ckan_fetch_consumer
@@ -15,14 +15,14 @@
         name: /usr/lib/ckan/default/src/ckanext-harvest/
         editable: true
         virtualenv: "{{ ve_dir }}"
-      when: harvest_repo.changed
+      when: repo.changed or ckan_package.changed
 
     - name: Install its requirements
       pip:
         chdir: /usr/lib/ckan/default/src/ckanext-harvest/
         requirements: pip-requirements.txt
         virtualenv: "{{ ve_dir }}"
-      when: harvest_repo.changed
+      when: repo.changed or ckan_package.changed
 
     - name: Install redis
       apt:
@@ -61,7 +61,7 @@
       git:
         repo: https://github.com/ckan/ckanext-dcat
         dest: /usr/lib/ckan/default/src/ckanext-dcat/
-      register: dcat_repo
+      register: repo
       notify:
         - restart ckan_gather_consumer
         - restart ckan_fetch_consumer
@@ -71,14 +71,14 @@
         name: /usr/lib/ckan/default/src/ckanext-dcat/
         editable: true
         virtualenv: "{{ ve_dir }}"
-      when: dcat_repo.changed
+      when: repo.changed or ckan_package.changed
 
     - name: Install its requirements
       pip:
         chdir: /usr/lib/ckan/default/src/ckanext-dcat/
         requirements: requirements.txt
         virtualenv: "{{ ve_dir }}"
-      when: dcat_repo.changed
+      when: repo.changed or ckan_package.changed
 
     - name: Add plugins to ckan.ini
       lineinfile:

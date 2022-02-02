@@ -15,6 +15,7 @@
 - name: Install the CKAN package
   apt:
     deb: https://packaging.ckan.org/python-ckan_2.9-py3-focal_amd64.deb
+  register: ckan_package
 
 - name: Install and configure postgres
   block:
@@ -208,6 +209,7 @@
         src: datapusher_settings.py.j2
         dest: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher_settings.py
         mode: 0644
+      when: ckan_package.changed
 
     - name: Configure better performance
       ini_file:
@@ -223,6 +225,7 @@
           workers: 3
           threads: 3
           lazy-apps: true
+      when: ckan_package.changed
 
     - name: Update supervisor to use the configuration file we just edited
       ini_file:
@@ -231,6 +234,7 @@
         option: command
         value: /usr/lib/ckan/datapusher/bin/uwsgi -i /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher-uwsgi.ini
         no_extra_spaces: true
+      when: ckan_package.changed
   notify: reload ckan
 
 - name: Update plugins in ckan.ini
@@ -253,6 +257,7 @@
 
 - name: Update ckan_default and datastore_default db permissions via script
   command: "ckan -c /etc/ckan/default/ckan.ini datastore set-permissions"
+  when: ckan_package.changed
   notify:
     - restart nginx
     - reload ckan

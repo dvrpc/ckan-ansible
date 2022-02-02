@@ -21,7 +21,7 @@
     name: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
     editable: true
     virtualenv: "{{ ve_dir }}"
-  when: repo.changed
+  when: repo.changed or ckan_package.changed
 
 - name: Add profile to ckan.ini
   ini_file:

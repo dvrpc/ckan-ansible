@@ -11,7 +11,7 @@
     name: /usr/lib/ckan/default/src/ckanext-scheming/
     editable: true
     virtualenv: "{{ ve_dir }}"
-  when: repo.changed
+  when: repo.changed or ckan_package.changed
 
 - name: Add plugin to ckan.ini
   lineinfile:

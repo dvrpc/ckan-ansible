@@ -25,7 +25,8 @@
     name: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
     editable: true
     virtualenv: "{{ ve_dir }}"
-  when: repo.changed
+  when: repo.changed or ckan_package.changed
+  notify: reload ckan
 
 - name: Register var to check if category already added
   xml:
