@@ -118,5 +118,5 @@
         name: "Clean up harvester jobs"
         minute: 20
         hour: 23
-        job: "/usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini harvester clean_harvest_log"
+        job: "/usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini harvester clean-harvest-log"
         user: root
