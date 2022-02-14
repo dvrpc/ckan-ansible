@@ -29,3 +29,10 @@
     section: app:main
     option: ckanext.dcat.rdf.profiles
     value: euro_dcat_ap gis_profile
+
+- name: Increase size of resource_proxy file (for previewing larger resources)
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: ckan.resource_proxy.max_file_size
+    value: 26214400
