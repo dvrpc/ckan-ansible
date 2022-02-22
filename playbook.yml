@@ -57,5 +57,5 @@
   tasks:
     - name: Set up oauth for internal instance
       include_role:
-        name: ckanext-oauth
+        name: oauth
       when: server == "internal"
