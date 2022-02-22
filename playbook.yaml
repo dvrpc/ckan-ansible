@@ -51,3 +51,9 @@
     - dvrpc_gis_harvester
     - pdfview
     - geoview
+
+  tasks:
+    - name: Set up oauth for internal instance
+      include_role:
+        name: ckanext-oauth
+      when: server == "internal"

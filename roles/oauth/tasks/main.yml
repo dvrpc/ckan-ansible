@@ -1,0 +1,41 @@
+---
+- name: Clone our theme plugin repo
+  git:
+    repo: git@github.com:dvrpc/ckanext-oauth2
+    dest: /usr/lib/ckan/default/src/ckanext-oauth2
+    accept_hostkey: true
+  register: repo
+
+- name: Install the plugin
+  pip:
+    name: /usr/lib/ckan/default/src/ckanext-oauth2/
+    editable: true
+    virtualenv: "{{ ve_dir }}"
+  when: repo.changed or ckan_package.changed
+  notify: reload ckan
+
+- name: Update ckan.ini (excluding plugin list)
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    backup: true
+  loop:
+    - {option: "ckan.oauth2.authorization_endpoint", value: "{{ authorization_endpoint }}"}
+    - {option: "ckan.oauth2.token_endpoint", value: "{{ }}"}
+    - {option: "ckan.oauth2.client_id", value: "{{ }}"}
+    - {option: "ckan.oauth2.client_secret", value: "{{ client_secret }}"}
+    - {option: "ckan.oauth2.scope", value: "{{ scope }}"}
+    - {option: "ckan.oauth2.profile_api_url", value: "{{ profile_api_url }}"}
+    - {option: "ckan.oauth2.profile_api_user_field", value: "{{ profile_api_user_field }}"}
+    - {option: "ckan.oauth2.profile_api_fullname_field", value: "{{ profile_api_fullname_field }}"}
+    - {option: "ckan.oauth2.profile_api_mail_field", value: "{{ profile_api_mail_field }}"}
+    - {option: "ckan.oauth2.authorization_header", value: "{{ authorization_header }}"}
+
+- name: Add plugin to ckan.ini
+  lineinfile:
+    path: /etc/ckan/default/ckan.ini
+    backrefs: true
+    regexp: "^(.*ckan.plugins = .*)$"
+    line: '\1 oauth2'
