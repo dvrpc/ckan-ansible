@@ -3,7 +3,7 @@ galaxy_info:
   description: Install geoview plugin.
   company: DVRPC
   license: GPL-2.0-only
-  min_ansible_version: 2.9
+  min_ansible_version: 2.11
   platforms:
     - name: Ubuntu
       versions:
