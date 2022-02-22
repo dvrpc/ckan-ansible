@@ -42,6 +42,8 @@
             state: present
 
   roles:
+    - users
+    - hardening
     - base
     - custom_privileges
     - dvrpc_theme
