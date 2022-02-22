@@ -1,7 +1,7 @@
 ---
 - name: Clone our theme plugin repo
   git:
-    repo: git@github.com:dvrpc/ckanext-oauth2
+    repo: https://github.com/dvrpc/ckanext-oauth2.git
     dest: /usr/lib/ckan/default/src/ckanext-oauth2
     accept_hostkey: true
   register: repo
