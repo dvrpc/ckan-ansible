@@ -1,0 +1,15 @@
+---
+# handlers file for hardening
+- name: reload ufw
+  ufw:
+    state: reloaded
+
+- name: reload sshd
+  service:
+    name: sshd
+    state: reloaded
+
+- name: restart fail2ban
+  systemd:
+    name: fail2ban
+    state: reloaded

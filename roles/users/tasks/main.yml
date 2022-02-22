@@ -1,0 +1,50 @@
+---
+# tasks file for users
+
+- name: Add user groups
+  group:
+    name: "{{ item.user }}"
+    state: present
+  loop: "{{ users }}"
+
+- name: Add admin group
+  group:
+    name: admin
+    state: present
+
+- name: Add users
+  user:
+    name: "{{ item.user }}"
+    group: "{{ item.user }}"
+    shell: /bin/bash
+    home: "/home/{{ item.user }}"
+    create_home: true
+    state: present
+  loop: "{{ users }}"
+
+- name: Add sudoers to admin group
+  user:
+    name: "{{ item }}"
+    groups: admin
+    state: present
+  loop: "{{ sudoers }}"
+
+- name: Add SSH public key for users
+  authorized_key:
+    user: "{{ item.user }}"
+    key: "{{ lookup('file', '{{ item.ssh_pub_key }}') }}"
+    state: present
+  loop: "{{ users }}"
+
+- name: Allow admin group to have passwordless sudo
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%admin'
+    line: '%admin ALL=(ALL) NOPASSWD: ALL'
+    validate: visudo -cf %s
+
+- name: Remove root ssh key
+  file:
+    path: /root/.ssh/authorized_keys
+    state: absent
