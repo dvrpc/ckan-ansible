@@ -105,7 +105,7 @@
     path: /etc/ckan/default/ckan.ini
     section: app:main
     option: ckan.site_url
-    value: http://localhost:8080
+    value: "{{ site_url }}"
     backup: true
 
 - name: Register var to check if db tables already created
