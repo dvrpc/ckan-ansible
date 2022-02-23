@@ -25,6 +25,13 @@
     proto: tcp
   notify: reload ufw
 
+- name: Allow http through firewall
+  ufw:
+    rule: allow
+    port: 80
+    proto: tcp
+  notify: reload ufw
+
 - name: Deny all other incoming access
   ufw:
     state: enabled

@@ -20,6 +20,10 @@
     - name: reload ckan
       command: supervisorctl reload
 
+    - name: reload ufw
+      ufw:
+        state: reloaded
+
   pre_tasks:
     - name: Update apt cache
       apt: update_cache=yes cache_valid_time=3600
