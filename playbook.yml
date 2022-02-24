@@ -5,10 +5,10 @@
     ve_dir: /usr/lib/ckan/default
 
   handlers:
-    - name: restart nginx
+    - name: reload nginx
       service:
         name: nginx
-        state: restarted
+        state: reloaded
         enabled: true
 
     - name: restart solr

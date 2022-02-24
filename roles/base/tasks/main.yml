@@ -259,7 +259,7 @@
   command: "ckan -c /etc/ckan/default/ckan.ini datastore set-permissions"
   when: ckan_package.changed
   notify:
-    - restart nginx
+    - reload nginx
     - reload ckan
 
 - name: Create sysadmin
