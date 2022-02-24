@@ -1,0 +1,38 @@
+---
+# This playbook should be run first on a new server as the root user - it runs the users and
+# hardening roles, setting up the server so that the main playbook can then be run as a normal
+# user.
+- hosts: ckan
+  become: true
+  vars:
+    ve_dir: /usr/lib/ckan/default
+
+  handlers:
+    - name: reload ufw
+      ufw:
+        state: reloaded
+
+  pre_tasks:
+    - name: Update apt cache
+      apt: update_cache=yes cache_valid_time=3600
+
+    - name: Install packages required for ansible on the remote server
+      block:
+
+        - name: Install system packages
+          apt:
+            name:
+              - python3-pip
+              - acl
+            state: present
+
+        - name: Install psycopg2
+          pip:
+            name:
+              - psycopg2-binary
+              - lxml
+            state: present
+
+  roles:
+    - users
+    - hardening
