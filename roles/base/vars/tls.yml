@@ -7,5 +7,3 @@ letsencrypt_keys_dir: /etc/letsencrypt/keys
 letsencrypt_csrs_dir: /etc/letsencrypt/csrs
 letsencrypt_certs_dir: /etc/letsencrypt/certs
 letsencrypt_account_key: /etc/letsencrypt/account/account.key
-nginx_https_template: https_nginx_conf.j2
-nginx_https_server_filename: ckan
