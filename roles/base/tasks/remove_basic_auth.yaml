@@ -1,0 +1,8 @@
+---
+# remove password protection from site
+- name: Remove config from nginx file
+  lineinfile:
+    path: /etc/nginx/sites-enabled/ckan
+    regex: ^auth_basic
+    state: absent
+  notify: reload nginx

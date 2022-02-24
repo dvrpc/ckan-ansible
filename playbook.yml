@@ -1,4 +1,6 @@
 ---
+# This playbook to be run after playbook_init has been run once, and then can be run on its
+# own anytime changes need to be made.
 - hosts: ckan
   become: true
   vars:
@@ -49,17 +51,47 @@
     - users
     - hardening
     - base
-    - custom_privileges
     - dvrpc_theme
-    # showcases
     - scheming
     - harvest
-    - dvrpc_gis_harvester
     - pdfview
     - geoview
 
   tasks:
+    - name: Set up tls
+      include_role:
+        name: base
+        tasks_from: tls_cert
+      when: server == "internal" or server == "public"
+
     - name: Set up oauth for internal instance
       include_role:
         name: oauth
       when: server == "internal"
+
+    # - name: Set up showcases for internal instance
+    #   include_role:
+    #     name: showcases
+    #   when: server == "internal"
+
+    - name: Set up GIS harvester for internal instance
+      include_role:
+        name: dvrpc_gis_harvester
+      when: server == "internal"
+
+    - name: Set up custom privileges for internal instance
+      include_role:
+        name: custom_privileges
+      when: server == "internal"
+
+    - name: Password protect site public site (temporarily)
+      include_role:
+        name: base
+        tasks_from: add_basic_auth
+      when: server == "public"
+
+    # - name: Remove password protection
+    #   include_role:
+    #     name: base
+    #     tasks_from: remove_basic_auth
+    #   when: server == "public"

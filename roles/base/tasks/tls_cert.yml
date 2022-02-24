@@ -1,0 +1,131 @@
+---
+# tasks to create and renew a TLS certificate
+# Developed via examples at the various modules and also
+# <https://www.digitalocean.com/community/tutorials/how-to-acquire-a-let-s-encrypt-certificate-using-ansible-on-ubuntu-18-04>
+
+- name: Include vars
+  include_vars: tls.yml
+
+- name: Create required directories in /etc/letsencrypt
+  file:
+    path: "/etc/letsencrypt/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0711
+  loop:
+    - account
+    - certs
+    - csrs
+    - keys
+
+- name: Generate an OpenSSL account private key with the default values (4096 bits, RSA)
+  community.crypto.openssl_privatekey:
+    path: "{{ letsencrypt_account_key }}"
+
+- name: Generate an OpenSSL private key with the default values (4096 bits, RSA)
+  community.crypto.openssl_privatekey:
+    path: "{{ letsencrypt_keys_dir }}/{{ domain }}.pem"
+
+- name: Generate an OpenSSL Certificate Signing Request
+  community.crypto.openssl_csr:
+    path: "{{ letsencrypt_csrs_dir }}/{{ domain }}.csr"
+    privatekey_path: "{{ letsencrypt_keys_dir }}/{{ domain }}.pem"
+    common_name: "{{ domain }}"
+
+- name: Begin Let's Encrypt challenges
+  community.crypto.acme_certificate:
+    acme_directory: "{{ acme_directory }}"
+    acme_version: "{{ acme_version }}"
+    account_key_src: "{{ letsencrypt_account_key }}"
+    account_email: "{{ acme_email }}"
+    terms_agreed: true
+    challenge: "{{ acme_challenge_type }}"
+    csr: "{{ letsencrypt_csrs_dir }}/{{ domain }}.csr"
+    dest: "{{ letsencrypt_certs_dir }}/{{ domain }}.crt"
+    fullchain_dest: "{{ letsencrypt_certs_dir }}/fullchain_{{ domain }}.crt"
+    remaining_days: 30
+  register: acme_challenge
+
+# We need to make a well-known location available for the challenge, and that
+# isn't in the standard nginx config file that gets created with installation
+# of ckan. But we only need to do this once. So if the https version of the
+# config file hasn't been uploaded yet, we add the updated non-https version.
+# Then we wait for nginx to reload before continuing with the challenge.
+- name: Set up .well-known dir if not already set up
+  block:
+
+    - name: Register var to see if directory already exists
+      stat:
+        path: /var/www/html/.well-knwon/acme-challenge
+      register: well_known
+
+    - name: Create .well-known/acme-challenge directory
+      file:
+        path: /var/www/html/.well-known/acme-challenge
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+      when: not well_known.stat.exists
+
+    - name: Check if https version of the file has already been uploaded
+      lineinfile:
+        path: "/etc/nginx/sites-available/{{ nginx_server_filename}}"
+        search_string: 443
+        state: absent
+      check_mode: true
+      changed_when: false
+      register: https_conf
+
+    - name: Upload http version of config with well-kwown directive
+      template:
+        src: http_nginx_conf.j2
+        dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
+        owner: root
+        group: root
+        mode: 0640
+      when: not https_conf.found
+      register: updated_http_conf
+
+    - name: Reload nginx if .well-known just added
+      command: systemctl reload nginx
+      when: updated_http_conf.changed
+
+    - name: Wait for port 80 to become open on the host, don't start checking for 10 seconds
+      wait_for:
+        port: 80
+        delay: 10
+      when: updated_http_conf.changed
+
+- name: Implement http-01 challenge files
+  copy:
+    content: "{{ acme_challenge['challenge_data'][domain]['http-01']['resource_value'] }}"
+    dest: "/var/www/html/{{ acme_challenge['challenge_data'][domain]['http-01']['resource'] }}"
+    owner: root
+    group: root
+    mode: 0644
+  when: acme_challenge is changed and domain in acme_challenge['challenge_data']
+
+- name: Complete Let's Encrypt challenges
+  community.crypto.acme_certificate:
+    acme_directory: "{{ acme_directory }}"
+    acme_version: "{{ acme_version }}"
+    account_key_src: "{{ letsencrypt_account_key }}"
+    account_email: "{{ acme_email }}"
+    challenge: "{{ acme_challenge_type }}"
+    csr: "{{ letsencrypt_csrs_dir }}/{{ domain }}.csr"
+    dest: "{{ letsencrypt_certs_dir }}/{{ domain }}.crt"
+    chain_dest: "{{ letsencrypt_certs_dir }}/chain_{{ domain }}.crt"
+    fullchain_dest: "{{ letsencrypt_certs_dir }}/fullchain_{{ domain }}"
+    data: "{{ acme_challenge }}"
+  when: acme_challenge is changed
+  notify: reload nginx
+
+- name: Copy https nginx config to server
+  template:
+    src: https_nginx_conf.j2
+    dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
+    owner: root
+    group: root
+    mode: 0640
