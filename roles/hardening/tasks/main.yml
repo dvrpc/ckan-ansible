@@ -9,7 +9,9 @@
 
 - name: Install system packages
   apt:
-    name: fail2ban
+    name:
+      - fail2ban
+      - ufw
     state: latest
 
 - name: Allow ssh through firewall
@@ -25,11 +27,14 @@
     proto: tcp
   notify: reload ufw
 
-- name: Allow http through firewall
+- name: Allow http/s through firewall
   ufw:
     rule: allow
-    port: 80
+    port: "{{ item }}"
     proto: tcp
+  loop:
+    - 80
+    - 443
   notify: reload ufw
 
 - name: Deny all other incoming access
