@@ -1,7 +1,7 @@
 ---
 # tasks file for users
 - name: Include vars based on server environment
-  include_vars: "{{ server }}.yml"
+  include_vars: "{{ instance }}.yml"
 
 - name: Add user groups
   group:

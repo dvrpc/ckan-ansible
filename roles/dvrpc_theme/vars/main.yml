@@ -1,2 +1,2 @@
 license_url: file:///usr/lib/ckan/default/src/ckanext-dvrpc_theme/ckanext/dvrpc_theme/dvrpc_licenses.json
-scheming_file: "{% if server == 'public' or dev_server == 'public' %}dvrpc_public_dataset.yml{% else %}dvrpc_internal_dataset.yml{% endif %}"
+scheming_file: "{% if instance == 'public' %}dvrpc_public_dataset.yml{% else %}dvrpc_internal_dataset.yml{% endif %}"

@@ -2,4 +2,6 @@ all:
   hosts:
     ckan:
       ansible_connection: local
-      server: internal
+      env: production
+      instance: internal
+      domain: data2.dvrpc.org

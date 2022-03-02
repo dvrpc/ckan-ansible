@@ -1,7 +1,7 @@
 ---
 # tasks to install CKAN with only base plugins (datastore, filestore, datapusher)
 - name: Include vars based on server environment
-  include_vars: "{{ server }}.yml"
+  include_vars: "{{ instance }}.yml"
 
 - name: Install CKAN required packages
   apt:
