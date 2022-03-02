@@ -5,4 +5,5 @@ all:
       ansible_ssh_private_key_file: /home/kris/vms/ckan3/.vagrant/machines/default/libvirt/private_key
       ansible_ssh_extra_args: "-o IdentitiesOnly=yes"
       server: development
-      domain: localhost:8080
+      dev_server: internal
+      domain: 192.168.121.21
