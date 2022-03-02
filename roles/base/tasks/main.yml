@@ -242,7 +242,7 @@
     path: /etc/ckan/default/ckan.ini
     section: app:main
     option: ckan.plugins
-    value: stats text_view datatables_view image_view webpage_view datastore datapusher resource_proxy
+    value: stats datatables_view image_view datastore datapusher resource_proxy
     backup: true
   notify: reload ckan
 
