@@ -1,0 +1,12 @@
+galaxy_info:
+  author: Kris Warner
+  description: Install dvrpc_internal_harvester plugin
+  company: DVRPC
+  license: GPL-2.0-only
+  min_ansible_version: 2.11
+  platforms:
+    - name: Ubuntu
+      versions:
+        - 20.04
+  galaxy_tags: []
+dependencies: []

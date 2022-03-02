@@ -77,12 +77,17 @@
     - name: Set up GIS harvester for internal instance
       include_role:
         name: dvrpc_gis_harvester
-      when: server == "internal"
+      when: server == "internal" or dev_server == "internal"
 
     - name: Set up custom privileges for internal instance
       include_role:
         name: custom_privileges
-      when: server == "internal"
+      when: server == "internal" or dev_server == "internal"
+
+    - name: Install internal harvester
+      include_role:
+        name: dvrpc_internal_harvester
+      when: server == "public" or dev_server == "public"
 
     - name: Password protect site public site (temporarily)
       include_role:
