@@ -59,3 +59,7 @@
     dest: /etc/fail2ban/jail.local
     mode: 0644
   notify: restart fail2ban
+
+- name: Further harden internal production instance
+  tasks: internal_prod.yml
+  when: env == "production" and instance == "internal"
