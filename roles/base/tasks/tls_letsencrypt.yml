@@ -1,5 +1,5 @@
 ---
-# tasks to create and renew a TLS certificate
+# tasks to create and renew a TLS certificate on public production server
 # Developed via examples at the various modules and also
 # <https://www.digitalocean.com/community/tutorials/how-to-acquire-a-let-s-encrypt-certificate-using-ansible-on-ubuntu-18-04>
 
@@ -78,9 +78,9 @@
       changed_when: false
       register: https_conf
 
-    - name: Upload http version of config with well-kwown directive
+    - name: Upload http version of config with well-known directive
       template:
-        src: http_nginx_conf.j2
+        src: nginx_conf_prod_public_http.j2
         dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
         owner: root
         group: root
@@ -124,7 +124,7 @@
 
 - name: Copy https nginx config to server
   template:
-    src: https_nginx_conf.j2
+    src: nginx_conf_prod_public_https.j2
     dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
     owner: root
     group: root

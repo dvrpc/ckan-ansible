@@ -58,11 +58,29 @@
     - geoview
 
   tasks:
-    - name: Set up tls
+    - name: Set up nginx for dev servers
       include_role:
         name: base
-        tasks_from: tls_cert
-      when: env == "production"
+        tasks_from: nginx_dev
+      when: env == "development"
+
+    - name: remove letscrypt tls from internal production server
+      include_role:
+        name: base
+        tasks_from: remove_letsencrypt
+      when: env == "production" and instance == "internal"
+
+    - name: Set up nginx/letsencrypt tls cert on public production server
+      include_role:
+        name: base
+        tasks_from: tls_letsencrypt
+      when: env == "production" and instance == "public"
+
+    - name: Set up nginx/wildcard tls cert on internal production server
+      include_role:
+        name: base
+        tasks_from: tls_wildcard
+      when: env == "production" and instance == "internal"
 
     - name: Set up oauth for internal instance
       include_role:
