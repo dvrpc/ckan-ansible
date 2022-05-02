@@ -61,5 +61,5 @@
   notify: restart fail2ban
 
 - name: Further harden internal production instance
-  tasks: internal_prod.yml
+  include_tasks: internal_prod.yml
   when: env == "production" and instance == "internal"
