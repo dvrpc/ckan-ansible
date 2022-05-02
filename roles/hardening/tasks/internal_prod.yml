@@ -32,6 +32,6 @@
     proto: any
     from_ip: "{{ item.ip }}"
   loop:
-    - "{{ port: 80, ip: 63.88.113.130 }}"
-    - "{{ port: 443, ip: 142.93.70.150 }}"
+    - {port: 80, ip: '63.88.113.130'}
+    - {port: 443, ip: '142.93.70.150'}
   notify: reload ufw
