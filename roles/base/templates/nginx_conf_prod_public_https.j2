@@ -34,6 +34,6 @@ server {
         root /home/postgres;
     }
     
-    ssl_certificate /etc/letsencrypt/certs/fullchain_{{ domain }};
+    ssl_certificate /etc/letsencrypt/certs/fullchain_{{ domain }}.crt;
     ssl_certificate_key /etc/letsencrypt/keys/{{ domain }}.pem;
 }
