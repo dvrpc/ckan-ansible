@@ -1,8 +1,11 @@
 ---
 # tasks file for hardening
-- name: Hardening for internal production instance
-  include_tasks: internal_prod.yml
-  when: env == "production" and instance == "internal"
+- name: Install system packages
+  apt:
+    name:
+      - fail2ban
+      - ufw
+    state: latest
 
 - name: Upgrade system packages
   apt:
@@ -11,18 +14,9 @@
     cache_valid_time: 86400  # one day
     autoremove: true
 
-- name: Install system packages
-  apt:
-    name:
-      - fail2ban
-      - ufw
-    state: latest
-
-- name: Allow ssh through firewall
+- name: Enable firewall
   ufw:
-    rule: allow
-    name: OpenSSH
-  notify: reload ufw
+    state: enabled
 
 - name: Limit ssh connections
   ufw:
@@ -31,35 +25,10 @@
     proto: tcp
   notify: reload ufw
 
-- name: Allow http/s through firewall
-  ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: tcp
-  loop:
-    - 80
-    - 443
-  notify: reload ufw
+- name: Hardening for internal production instance
+  include_tasks: internal_prod.yml
+  when: env == "production" and instance == "internal"
 
-- name: Deny all other incoming access
-  ufw:
-    state: enabled
-    direction: incoming
-    policy: deny
-  notify: reload ufw
-
-- name: Limit ssh access to ip4, disable root login, set a timeout on idle connection
-  template:
-    src: sshd_config.j2
-    dest: /etc/ssh/sshd_config
-    owner: root
-    group: root
-    mode: 0644
-  notify: reload sshd
-
-- name: Configure fail2ban
-  copy:
-    src: jail.local
-    dest: /etc/fail2ban/jail.local
-    mode: 0644
-  notify: restart fail2ban
+- name: Hardening for public production instance
+  include_tasks: public_prod.yml
+  when: env == "production" and instance == "public"

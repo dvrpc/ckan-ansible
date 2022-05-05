@@ -1,37 +1,22 @@
 ---
 # hardening tasks specific to internal production instance
-- name: Deny ssh
-  ufw:
-    rule: deny
-    to_port: ssh
-    proto: any
-  notify: reload ufw
-
-- name: Allow ssh from within DVRPC firewall
-  ufw:
-    rule: limit
-    to_port: ssh
-    from_ip: 63.88.113.130
-    proto: any
-  notify: reload ufw
-
-- name: Deny http/s
-  ufw:
-    rule: deny
-    to_port: "{{ item }}"
-    proto: any
-  loop:
-    - 80
-    - 443
-  notify: reload ufw
-
 - name: Allow http/s from within DVRPC firewall and public instance
   ufw:
     rule: allow
     to_port: "{{ item.port }}"
-    proto: any
+    proto: tcp
     from_ip: "{{ item.ip }}"
   loop:
-    - {port: 80, ip: '63.88.113.130'}
+    - {port: 80, ip: '192.168.200.1'}
     - {port: 443, ip: '142.93.70.150'}
+  notify: reload ufw
+
+- name: Reject all other http/s
+  ufw:
+    rule: reject
+    to_port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 80
+    - 443
   notify: reload ufw
