@@ -1,0 +1,10 @@
+---
+- name: Allow http/s through firewall
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 80
+    - 443
+  notify: reload ufw
