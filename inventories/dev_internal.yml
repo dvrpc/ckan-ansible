@@ -1,9 +1,9 @@
 all:
   hosts:
     ckan:
-      ansible_host: 192.168.121.21
-      ansible_ssh_private_key_file: /home/kris/vms/ckan3/.vagrant/machines/default/libvirt/private_key
+      ansible_host: 192.168.60.21
+      ansible_ssh_private_key_file: /home/kris/vms/ckan3/.vagrant/machines/default/virtualbox/private_key
       ansible_ssh_extra_args: "-o IdentitiesOnly=yes"
       env: development
       instance: internal
-      domain: 192.168.121.21
+      domain: 192.168.60.21
