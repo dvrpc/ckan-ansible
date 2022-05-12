@@ -30,3 +30,22 @@
     value: image_view text_view datatables_view pdf_view geojson_view
     backup: true
   notify: reload ckan
+
+# add map style changes for geojson previewer
+- name: Add resource view map styles
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    backup: true
+  loop:
+    - { option: "ckanext.spatial.common_map.type", value: "custom" }
+    - {
+        option: "ckanext.spatial.common_map.custom.url",
+        value: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+      }
+    - {
+        option: "ckanext.spatial.common_map.attribution",
+        value: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }
