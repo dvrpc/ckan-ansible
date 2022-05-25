@@ -77,10 +77,10 @@
         name: oauth
       when: env == "production" and instance == "internal"
 
-    # - name: Set up showcases for internal instance
-    #   include_role:
-    #     name: showcases
-    #   when: env == "production" and instance == "internal"
+    - name: Set up showcases for internal instance
+      include_role:
+        name: showcases
+      when: instance == "internal"
 
     - name: Set up GIS harvester for internal instance
       include_role:
