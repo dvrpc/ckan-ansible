@@ -17,10 +17,10 @@
     policy: deny
   notify: reload ufw
 
-- name: Limit ssh access to ip4, disable root login, set a timeout on idle connection
-  template:
-    src: sshd_config.j2
-    dest: /etc/ssh/sshd_config
+- name: Add tighter ssh security options than default
+  copy:
+    src: sshd_config.conf
+    dest: /etc/ssh/sshd_config.d/
     owner: root
     group: root
     mode: 0644
