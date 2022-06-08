@@ -1,6 +1,6 @@
 galaxy_info:
   author: Kris Warner
-  description: Install harvest and cat plugins
+  description: Install harvest and dcat plugins
   company: DVRPC
   license: GPL-2.0-only
   min_ansible_version: 2.11

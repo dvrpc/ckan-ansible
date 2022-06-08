@@ -1,7 +1,0 @@
-all:
-  hosts:
-    ckan:
-      ansible_connection: local
-      env: production
-      instance: internal
-      domain: catalog.dvrpc.org

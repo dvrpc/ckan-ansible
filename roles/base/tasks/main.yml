@@ -1,8 +1,5 @@
 ---
 # tasks to install CKAN with only base plugins (datastore, filestore, datapusher)
-- name: Include vars based on server environment
-  include_vars: "{{ instance }}.yml"
-
 - name: Install CKAN required packages
   apt:
     name:
@@ -308,7 +305,7 @@
         user: root
 
     - name: Add script to get top 10 most viewed datasets
-      template:
+      copy:
         src: dataset_tracking_total.sh
         dest: ~/dataset_tracking_total.sh
         mode: 0755
@@ -316,7 +313,7 @@
       become_user: postgres
 
     - name: Add script to get top 10 most recently viewed datasets
-      template:
+      copy:
         src: dataset_tracking_recent.sh
         dest: ~/dataset_tracking_recent.sh
         mode: 0755

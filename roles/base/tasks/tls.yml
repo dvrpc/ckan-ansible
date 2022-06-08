@@ -79,8 +79,8 @@
       register: https_conf
 
     - name: Upload http version of config with well-known directive
-      template:
-        src: nginx_conf_prod_public_http.j2
+      copy:
+        src: nginx_conf_prod_http
         dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
         owner: root
         group: root

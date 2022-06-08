@@ -60,51 +60,37 @@
         tasks_from: nginx_dev
       when: env == "development"
 
-    - name: Set up nginx/letsencrypt tls cert on public production server
+    - name: Set up nginx/letsencrypt tls cert
       include_role:
         name: base
-        tasks_from: tls_letsencrypt
-      when: env == "production" and instance == "public"
+        tasks_from: tls
+      when: env == "production"
 
-    - name: Set up nginx/wildcard tls cert on internal production server
-      include_role:
-        name: base
-        tasks_from: tls_wildcard
-      when: env == "production" and instance == "internal"
-
-    - name: Set up oauth for internal instance
+    - name: Set up oauth
       include_role:
         name: oauth
-      when: env == "production" and instance == "internal"
+      when: env == "production"
 
-    - name: Set up showcases for internal instance
+    - name: Set up showcases
       include_role:
         name: showcases
-      when: instance == "internal"
 
-    - name: Set up GIS harvester for internal instance
+    - name: Set up GIS harvester
       include_role:
         name: dvrpc_gis_harvester
-      when: instance ==  "internal"
 
-    - name: Set up custom privileges for internal instance
+    - name: Set up custom privileges
       include_role:
         name: custom_privileges
-      when: instance == "internal"
 
-    - name: Install internal harvester
-      include_role:
-        name: dvrpc_internal_harvester
-      when: instance == "public"
-
-    - name: Password protect site public site (temporarily)
+    - name: Password protect site (temporarily)
       include_role:
         name: base
         tasks_from: add_basic_auth
-      when: env == "production" and instance == "public"
+      when: env == "production"
 
     # - name: Remove password protection
     #   include_role:
     #     name: base
     #     tasks_from: remove_basic_auth
-    #   when: env == "production" and instance == "public"
+    #   when: env == "production"
