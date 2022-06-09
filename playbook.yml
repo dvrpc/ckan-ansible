@@ -50,8 +50,11 @@
     - dvrpc_theme
     - scheming
     - harvest
+    - dvrpc_gis_harvester
     - pdfview
     - geoview
+    - custom_privileges
+    - showcases
 
   tasks:
     - name: Set up nginx for dev servers
@@ -70,18 +73,6 @@
       include_role:
         name: oauth
       when: env == "production"
-
-    - name: Set up showcases
-      include_role:
-        name: showcases
-
-    - name: Set up GIS harvester
-      include_role:
-        name: dvrpc_gis_harvester
-
-    - name: Set up custom privileges
-      include_role:
-        name: custom_privileges
 
     - name: Password protect site (temporarily)
       include_role:
