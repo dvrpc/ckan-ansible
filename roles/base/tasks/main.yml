@@ -82,12 +82,13 @@
         dest: /etc/solr/conf/schema.xml
         state: link
 
+    # Docs use 127.0.0.1 but we actually want localhost so it can use IP6
     - name: Update CKAN ini file for solr setting
       ini_file:
         path: /etc/ckan/default/ckan.ini
         section: app:main
         option: solr_url
-        value: http://127.0.0.1:8983/solr
+        value: http://localhost:8983/solr
         backup: true
 
     - name: Give group write permissions to /var/log/tomcat9 to avoid errors
