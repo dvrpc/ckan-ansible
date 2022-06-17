@@ -1,2 +1,2 @@
 license_url: file:///usr/lib/ckan/default/src/ckanext-dvrpc_theme/ckanext/dvrpc_theme/dvrpc_licenses.json
-scheming_file: "dvrpc_internal_dataset.yml"
+scheming_file: "dvrpc_dataset.yml"
