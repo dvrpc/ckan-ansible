@@ -27,7 +27,7 @@ Backup:
 Restore:
   1. Do this locally first on a test machine so as to ensure the integrity of the data - the process involves wiping everything from the existing database
   2. `cd` into directory where you placed/uploaded the backups
-  3. Activate the CKAN virtual environment:
+  3. Activate the CKAN virtual environment: `source /usr/lib/ckan/default/bin/activate`
   4. Wipe the existing database: `ckan -c /etc/ckan/default/ckan.ini db clean`
   5. `sudo -u postgres pg_restore --clean --if-exists -d ckan_default < ckan_default.pgc`
   6. `sudo -u postgres pg_restore --clean --if-exists -d datastore_default < datastore_default.pgc`
