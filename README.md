@@ -2,15 +2,15 @@
 
 Ansible project for creating DVRPC's Data Catalog (CKAN).
 
-There are two inventory files in the inventories/ folder matching the target environment - development or production.
+The Data Catalog is hosted on a Digital Ocean server. During the creation of that server, add one of the system users' ssh keys (Kris Warner or Jesse Strangfeld). These users will then be able to use their corresponding private ssh keys to connect via ssh as the root user. System users are set up in the "users" role.
 
-The Data Catalog is hosted on a Digital Ocean server. During the creation of that server, add one of our users' ssh keys (Kris Warner or Jesse Strangfeld). These users will then be able to use their corresponding private ssh keys to connect via ssh as the root user.
+Different inventory files for environments (production/development) and users are available in the inventories/ directory. System users should set up inventories for their use. In the commands below, specify the appropriate inventory file (e.g. `-i inventories/kw_digital_ocean.yml`).
 
-An initial, one-time playbook has been created to be run as the root user. Run this playbook with the command: `ansible-playbook playbook_init.yml -u root -i inventories/public.yml`.
+An initial, one-time playbook has been created to be run as the root user. Run this playbook with the command: `ansible-playbook playbook_init.yml -u root -i inventories/[inventory_file]`.
 
 It runs the "user" and "hardening" roles, which in general sets up non-root users and hardens the server. These roles are also included in the main playbook that can be run anytime an update is needed.
 
-Now run the main playbook: `ansible-playbook playbook.yml -u [kwarner or jstrangfeld] -i inventories/public.yml`.
+Now run the main playbook: `ansible-playbook playbook.yml -i inventories/[inventory_file]`.
 
 After the initial setup, the playbook_init.yml does not need to be run again, and so you can run playbook.yml as above anytime a change has been made.
 
