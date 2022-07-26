@@ -4,7 +4,7 @@
   git:
     repo: https://github.com/dvrpc/ckanext-dvrpc_gis_harvester
     dest: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
-    version: main
+    version: master
   register: repo
 
 # - name: syncronize repo from local

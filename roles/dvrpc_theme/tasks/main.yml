@@ -1,4 +1,7 @@
 ---
+- name: Include secrets
+  include_vars: secrets.yml
+
 - name: Create directory to put ssh keys into
   file:
     path: /ssh_keys
@@ -62,6 +65,8 @@
     - {option: "scheming.dataset_schemas", value: "ckanext.dvrpc_theme:{{ scheming_file }}"}
     - {option: "scheming.presets", value: "ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json"}
     - {option: "licenses_group_url", value: "{{ license_url }}"}
+    - {option: "ckan.dvrpcthemeplugin.gis_user", value: "{{ gis_user }}"}
+    - {option: "ckan.dvrpcthemeplugin.gis_password", value: "{{ gis_password }}"}
 
 - name: Add plugin to ckan.ini
   lineinfile:
