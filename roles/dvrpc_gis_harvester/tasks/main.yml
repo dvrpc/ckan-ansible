@@ -7,16 +7,6 @@
     version: master
   register: repo
 
-# - name: syncronize repo from local
-#   synchronize:
-#     src: /home/kris/dvrpc/ckanext-dvrpc_gis_harvester/
-#     dest: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester/
-#     rsync_opts:
-#       - "--exclude=.git/"
-#       - "--exclude=ve/"
-#       - "--exclude=.mypy_cache"
-#   register: repo
-
 - name: Install the plugin
   pip:
     name: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
