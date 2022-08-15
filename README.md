@@ -27,7 +27,6 @@ Backup database:
 Backup filestore:
   1. `cd /var/lib/ckan`
   2. `tar -czf filestore-DATE.tar.gz default/`
-  3. if this will be restored on different server, use scp to download the file to your local machien
 
 Restore database:
   1. Do this locally first on a test machine so as to ensure the integrity of the data - the process involves wiping everything from the existing database
@@ -39,7 +38,6 @@ Restore database:
   7. rebuild the solr index: `ckan -c /etc/ckan/default/ckan.ini tracking update && ckan -c /etc/ckan/default/ckan.ini search-index rebuild -r`
 
 Restore Filestore:
-  1. If restoring on separate server, use scp to upload backup from your local machine
-  2. `cd var/lib/ckan`
-  3. Make a copy of the local directory: `mv default/ default-bk/`
-  4. untar the archive: `tar -xf filestore-DATE.tar.gz`
+  1. `cd var/lib/ckan`
+  2. Make a copy of the local directory: `mv default/ default-bk/`
+  3. untar the archive: `tar -xf filestore-DATE.tar.gz`
