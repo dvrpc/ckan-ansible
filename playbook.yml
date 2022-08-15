@@ -73,15 +73,3 @@
       include_role:
         name: oauth
       when: env == "production"
-
-    - name: Password protect site (temporarily)
-      include_role:
-        name: base
-        tasks_from: add_basic_auth
-      when: env == "production"
-
-    # - name: Remove password protection
-    #   include_role:
-    #     name: base
-    #     tasks_from: remove_basic_auth
-    #   when: env == "production"
