@@ -67,6 +67,8 @@
       include_role:
         name: base
         tasks_from: tls
+      tags:
+        - tls
       when: env == "production"
 
     - name: Set up oauth

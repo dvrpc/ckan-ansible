@@ -4,9 +4,11 @@
 # <https://www.digitalocean.com/community/tutorials/how-to-acquire-a-let-s-encrypt-certificate-using-ansible-on-ubuntu-18-04>
 
 - name: Include vars
+  tags: tls
   include_vars: tls.yml
 
 - name: Create required directories in /etc/letsencrypt
+  tags: tls
   file:
     path: "/etc/letsencrypt/{{ item }}"
     state: directory
@@ -20,20 +22,24 @@
     - keys
 
 - name: Generate an OpenSSL account private key with the default values (4096 bits, RSA)
+  tags: tls
   community.crypto.openssl_privatekey:
     path: "{{ letsencrypt_account_key }}"
 
 - name: Generate an OpenSSL private key with the default values (4096 bits, RSA)
+  tags: tls
   community.crypto.openssl_privatekey:
     path: "{{ letsencrypt_keys_dir }}/{{ domain }}.pem"
 
 - name: Generate an OpenSSL Certificate Signing Request
+  tags: tls
   community.crypto.openssl_csr:
     path: "{{ letsencrypt_csrs_dir }}/{{ domain }}.csr"
     privatekey_path: "{{ letsencrypt_keys_dir }}/{{ domain }}.pem"
     common_name: "{{ domain }}"
 
 - name: Begin Let's Encrypt challenges
+  tags: tls
   community.crypto.acme_certificate:
     acme_directory: "{{ acme_directory }}"
     acme_version: "{{ acme_version }}"
@@ -53,14 +59,17 @@
 # config file hasn't been uploaded yet, we add the updated non-https version.
 # Then we wait for nginx to reload before continuing with the challenge.
 - name: Set up .well-known dir if not already set up
+  tags: tls
   block:
 
     - name: Register var to see if directory already exists
+      tags: tls
       stat:
         path: /var/www/html/.well-knwon/acme-challenge
       register: well_known
 
     - name: Create .well-known/acme-challenge directory
+      tags: tls
       file:
         path: /var/www/html/.well-known/acme-challenge
         state: directory
@@ -70,6 +79,7 @@
       when: not well_known.stat.exists
 
     - name: Check if https version of the file has already been uploaded
+      tags: tls
       lineinfile:
         path: "/etc/nginx/sites-available/{{ nginx_server_filename}}"
         search_string: 443
@@ -79,6 +89,7 @@
       register: https_conf
 
     - name: Upload http version of config with well-known directive
+      tags: tls
       copy:
         src: nginx_conf_prod_http
         dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
@@ -89,16 +100,19 @@
       register: updated_http_conf
 
     - name: Reload nginx if .well-known just added
+      tags: tls
       command: systemctl reload nginx
       when: updated_http_conf.changed
 
     - name: Wait for port 80 to become open on the host, don't start checking for 10 seconds
+      tags: tls
       wait_for:
         port: 80
         delay: 10
       when: updated_http_conf.changed
 
 - name: Implement http-01 challenge files
+  tags: tls
   copy:
     content: "{{ acme_challenge['challenge_data'][domain]['http-01']['resource_value'] }}"
     dest: "/var/www/html/{{ acme_challenge['challenge_data'][domain]['http-01']['resource'] }}"
@@ -108,6 +122,7 @@
   when: acme_challenge is changed and domain in acme_challenge['challenge_data']
 
 - name: Complete Let's Encrypt challenges
+  tags: tls
   community.crypto.acme_certificate:
     acme_directory: "{{ acme_directory }}"
     acme_version: "{{ acme_version }}"
@@ -123,6 +138,7 @@
   notify: reload nginx
 
 - name: Copy https nginx config to server
+  tags: tls
   template:
     src: nginx_conf_prod_public_https.j2
     dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
