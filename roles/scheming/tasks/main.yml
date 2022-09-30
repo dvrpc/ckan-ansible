@@ -3,7 +3,7 @@
   git:
     repo: https://github.com/ckan/ckanext-scheming/
     dest: /usr/lib/ckan/default/src/ckanext-scheming/
-    version: release-2.1.0
+    version: master
   register: repo
 
 - name: Install the plugin
