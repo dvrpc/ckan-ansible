@@ -153,6 +153,12 @@
       when: datastore_database.changed
   notify: reload ckan
 
+- name: Install v0.6.0 of flask-login to fix compatibility issues
+  pip:
+    virtualenv: /usr/lib/ckan/datapusher
+    name: flask_login
+    version: 0.6.0
+
 - name: Configure filestore
   block:
     - name: Create directory
