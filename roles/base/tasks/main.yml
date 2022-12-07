@@ -13,6 +13,7 @@
   apt:
     deb: https://packaging.ckan.org/python-ckan_2.9-py3-focal_amd64.deb
   register: ckan_package
+  when: update_ckan is true
 
 - name: Install and configure postgres
   block:

@@ -134,6 +134,7 @@
     chain_dest: "{{ letsencrypt_certs_dir }}/chain_{{ domain }}.crt"
     fullchain_dest: "{{ letsencrypt_certs_dir }}/fullchain_{{ domain }}.crt"
     data: "{{ acme_challenge }}"
+    force: true
   when: acme_challenge is changed
   notify: reload nginx
 
