@@ -14,7 +14,7 @@ Now run the main playbook: `ansible-playbook playbook.yml -i inventories/[invent
 
 After the initial setup, the playbook_init.yml does not need to be run again, and so you can run playbook.yml as above anytime a change has been made.
 
-Updating the CKAN package itself is controlled by a tasks/variable: set `ckan_update` to true in roles/base/vars/main.yml to update it.
+Updating the CKAN package itself is controlled by a task/variable. By default, it's set to `false` in the base role's vars file. You can override this on the command line by including "-e 'update_ckan=true'" on the command line when running the main playbook.
 
 ## Database and Filestore Backup and Restore
 
