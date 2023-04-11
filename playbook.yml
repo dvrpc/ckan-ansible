@@ -45,7 +45,8 @@
 
   roles:
     - users
-    - hardening
+    - role: hardening
+      tags: hardening
     - base
     - dvrpc_theme
     - scheming
