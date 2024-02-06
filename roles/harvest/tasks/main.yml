@@ -52,8 +52,9 @@
         regexp: "^(.*ckan.plugins = .*)$"
         line: '\1 harvest ckan_harvester'
 
-    - name: Set up harvester db.
-      command: /usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini harvester initdb
+    # initdb is no longer one of harvester's commands
+    # - name: Set up harvester db.
+    #   command: /usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini harvester initdb
 
 - name: Install and configure ckanext-dcat plugin
   block:

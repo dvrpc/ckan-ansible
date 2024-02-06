@@ -293,6 +293,14 @@
       when: sysadmin not in sysadmin_list.stdout
   notify: reload ckan
 
+- name: CORS - allow all origins
+  ini_file:
+    path: /etc/ckan/default/ckan.ini
+    section: app:main
+    option: ckan.cors.origin_allow_all
+    value: "true"
+  notify: reload ckan
+
 # https://docs.ckan.org/en/2.9/maintaining/tracking.html
 - name: Add page view tracking, including email notification
   block:
