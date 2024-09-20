@@ -1,0 +1,9 @@
+all:
+  hosts:
+    ckan:
+      ansible_host: 137.184.141.245
+      env: staging
+      domain: staging-catalog.cloud.dvrpc.org
+      update_ckan: false
+      use_tls: true
+      dvrpc_git_branch: development

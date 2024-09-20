@@ -4,17 +4,17 @@ Ansible project for creating DVRPC's Data Catalog (CKAN).
 
 The Data Catalog is hosted on a Digital Ocean server. During the creation of that server, add one of the system users' ssh keys (Kris Warner or Jesse Strangfeld). These users will then be able to use their corresponding private ssh keys to connect via ssh as the root user. System users are set up in the "users" role.
 
-Different inventory files for environments (production/development) and users are available in the inventories/ directory. System users should set up inventories for their use. In the commands below, specify the appropriate inventory file (e.g. `-i inventories/kw_digital_ocean.yml`).
+Inventory files for various environments (development/staging/production) are available in the inventories/ directory. Environment-specific variables are stored in these inventories, which are used within the playbook/tasks. For instance, the `dvrpc_branch_repo` specifies which branch of DVRPC's maintained CKAN extentions to use: main for the production environment and development for the staging and development environments (at least as of time of writing).
 
-An initial, one-time playbook has been created to be run as the root user. Run this playbook with the command: `ansible-playbook playbook_init.yml -u root -i inventories/[inventory_file]`.
+NOTE: servers must have both IP4 and IP6 enabled.
+
+An initial, one-time playbook has been created to be run as the root user. Run this playbook with the command: `ansible-playbook playbook_init.yml -u root -i inventories/<inventory_file>`. All environments require this to be run first.
 
 It runs the "user" and "hardening" roles, which in general sets up non-root users and hardens the server. These roles are also included in the main playbook that can be run anytime an update is needed.
 
-Now run the main playbook: `ansible-playbook playbook.yml -i inventories/[inventory_file]`.
+After setting the variable `update_ckan` to the appropriate setting (`true` the first time you install CKAN, but then generally `false` unless you are explicitly attempting to update the CKAN version), run the main playbook: `ansible-playbook playbook.yml -u <username> -i inventories/<inventory_file>`. 
 
 After the initial setup, the playbook_init.yml does not need to be run again, and so you can run playbook.yml as above anytime a change has been made.
-
-Updating the CKAN package itself is controlled by a task/variable. By default, it's set to `false` in the base role's vars file. You can override this on the command line by including "-e 'update_ckan=true'" on the command line when running the main playbook.
 
 ## Database and Filestore Backup and Restore
 

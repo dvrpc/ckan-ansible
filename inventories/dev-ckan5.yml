@@ -7,3 +7,6 @@ all:
       ansible_ssh_extra_args: "-o IdentitiesOnly=yes"
       env: development
       domain: localhost:8080
+      update_ckan: false
+      use_tls: false
+      dvrpc_git_branch: development

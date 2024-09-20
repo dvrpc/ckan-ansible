@@ -1,0 +1,9 @@
+all:
+  hosts:
+    ckan:
+      ansible_host: 142.93.70.150
+      env: production
+      domain: catalog.dvrpc.org
+      update_ckan: false
+      use_tls: true
+      dvrpc_git_branch: main

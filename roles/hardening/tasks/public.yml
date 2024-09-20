@@ -1,5 +1,5 @@
 ---
-# hardening tasks specific to production environment
+# further hardening for public servers
 - name: Allow http/s through firewall
   ufw:
     rule: allow

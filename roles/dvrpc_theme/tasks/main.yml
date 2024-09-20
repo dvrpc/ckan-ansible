@@ -19,7 +19,7 @@
   git:
     repo: git@github.com:dvrpc/ckanext-dvrpc_theme
     dest: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
-    version: main
+    version: "{{ dvrpc_git_branch }}"
     accept_hostkey: true
     key_file: /ssh_keys/ckan_dvrpc_theme_repo
   register: repo

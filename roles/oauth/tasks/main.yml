@@ -3,6 +3,7 @@
   git:
     repo: https://github.com/dvrpc/ckanext-oauth2.git
     dest: /usr/lib/ckan/default/src/ckanext-oauth2
+    version: "{{ dvrpc_git_branch }}"
     accept_hostkey: true
   register: repo
 

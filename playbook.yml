@@ -50,29 +50,38 @@
     - base
     - dvrpc_theme
     - scheming
-    - harvest
-    - dvrpc_gis_harvester
     - pdfview
     - geoview
     - custom_privileges
     - showcases
 
   tasks:
-    - name: Set up nginx for dev servers
+    - name: Set up nginx without TLS
       include_role:
         name: base
-        tasks_from: nginx_dev
-      when: env == "development"
-
-    - name: Set up nginx/letsencrypt tls cert
+        tasks_from: nginx_no_tls
+      when: not use_tls
+    
+    - name: Set up nginx with TLS
       include_role:
         name: base
-        tasks_from: tls
+        tasks_from: nginx_tls
       tags:
         - tls
-      when: env == "production"
+      when: use_tls
 
     - name: Set up oauth
       include_role:
         name: oauth
       when: env == "production"
+
+    - name: Install harvest extension
+      include_role:
+        name: harvest
+      when: env == "production"
+
+    - name: Install our custom harvest extension, built on top of other one
+      include_role:
+        name: dvrpc_gis_harvester
+      when: env == "production"
+

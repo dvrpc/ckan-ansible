@@ -3,6 +3,7 @@
   git:
     repo: https://github.com/dvrpc/ckanext-customuserprivileges
     dest: /usr/lib/ckan/default/src/ckanext-customuserprivileges
+    version: "{{ dvrpc_git_branch }}"
   register: repo
 
 - name: Install the plugin

@@ -2,7 +2,7 @@
 # upload nginx config for dev servers
 - name: Upload http version of config (with no .well-known location)
   copy:
-    src: nginx_conf_dev
+    src: nginx_conf_no_tls
     dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
     owner: root
     group: root

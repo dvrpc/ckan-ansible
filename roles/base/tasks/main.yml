@@ -82,6 +82,7 @@
         src: /usr/lib/ckan/default/src/ckan/ckan/config/solr/schema.xml
         dest: /etc/solr/conf/schema.xml
         state: link
+        force: true
 
     # Docs use 127.0.0.1 but we actually want localhost so it can use IP6
     - name: Update CKAN ini file for solr setting
@@ -104,7 +105,7 @@
     path: /etc/ckan/default/ckan.ini
     section: app:main
     option: ckan.site_url
-    value: "http{% if env == 'production' %}s{% endif %}://{{ domain }}"
+    value: "http{% if use_tls %}s{% endif %}://{{ domain }}"
     backup: true
 
 - name: Register var to check if db tables already created
@@ -357,3 +358,11 @@
         user: postgres
       become: true
       become_user: postgres
+
+- name: Change template permissions
+  file:
+    path: /usr/lib/ckan/default/src/ckan/ckan/public/base
+    owner: www-data
+    group: www-data
+    recurse: yes
+

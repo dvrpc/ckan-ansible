@@ -25,10 +25,10 @@
     proto: tcp
   notify: reload ufw
 
-- name: Hardening for production environment
-  include_tasks: prod.yml
-  when: env == "production"
+- name: Hardening
+  include_tasks: public.yml
+  when: env in ["production", "staging"]
 
-- name: Hardening for development environment
-  include_tasks: dev.yml
+- name: Hardening
+  include_tasks: private.yml
   when: env == "development"
