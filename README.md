@@ -1,5 +1,4 @@
 # ckan-ansible
-
 Ansible project for creating DVRPC's Data Catalog (CKAN).
 
 The Data Catalog is hosted on a Digital Ocean server. During the creation of that server, add one of the system users' ssh keys (Kris Warner or Jesse Strangfeld). These users will then be able to use their corresponding private ssh keys to connect via ssh as the root user. System users are set up in the "users" role.
@@ -18,6 +17,14 @@ It runs the "user" and "hardening" roles, which in general sets up non-root user
 After setting the variable `update_ckan` to the appropriate setting (`true` the first time you install CKAN, but then generally `false` unless you are explicitly attempting to update the CKAN version), run the main playbook: `ansible-playbook playbook.yml -u <username> -i inventories/<inventory_file>`. 
 
 After the initial setup, the playbook_init.yml does not need to be run again, and so you can run playbook.yml as above anytime a change has been made.
+
+## DVRPC-maintained extentions
+
+The majority of Data Catalog is stock CKAN or 3rd-party extensions, however we also have several extensions we maintain:
+* https://github.com/dvrpc/ckanext-dvrpc_theme
+* https://github.com/dvrpc/ckanext-oauth2
+* https://github.com/dvrpc/ckanext-dvrpc_gis_harvester
+* https://github.com/dvrpc/ckanext-customuserprivileges
 
 ## Database and Filestore Backup and Restore
 
