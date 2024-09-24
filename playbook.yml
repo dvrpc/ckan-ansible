@@ -85,3 +85,9 @@
         name: dvrpc_gis_harvester
       when: env == "production"
 
+    - name: Add basic authentication
+      include_role:
+        name: base
+        tasks_from: basic_auth
+      when: env == "staging"
+

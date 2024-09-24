@@ -1,6 +1,4 @@
 ---
-# temporarily password protect site
-
 # required for putting app behind basic authentication (using the htpasswd module)
 - name: Install passlib
   apt:
