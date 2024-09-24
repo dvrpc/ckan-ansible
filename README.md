@@ -6,6 +6,9 @@ The Data Catalog is hosted on a Digital Ocean server. During the creation of tha
 
 Inventory files for various environments (development/staging/production) are available in the inventories/ directory. Environment-specific variables are stored in these inventories, which are used within the playbook/tasks. For instance, the `dvrpc_branch_repo` specifies which branch of DVRPC's maintained CKAN extentions to use: main for the production environment and development for the staging and development environments (at least as of time of writing).
 
+Staging: https://staging-catalog.cloud.dvrpc.org<br>
+Production: https://catalog.dvrpc.org
+
 NOTE: servers must have both IP4 and IP6 enabled.
 
 An initial, one-time playbook has been created to be run as the root user. Run this playbook with the command: `ansible-playbook playbook_init.yml -u root -i inventories/<inventory_file>`. All environments require this to be run first.
