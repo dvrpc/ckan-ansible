@@ -1,1 +1,3 @@
 harvest_source_id: "29ebae88-26c4-496d-a3bc-b77b7f9f8877"
+# staging harvest id is same as production, because of restoring the db on staging from production, # but there's a potential it could change if new one created.
+staging_harvest_source_id: "29ebae88-26c4-496d-a3bc-b77b7f9f8877"

@@ -31,10 +31,10 @@
 - name: Create cronjob to clear and reimport GIS datasets
   cron:
     name: "Clear and reimport GIS datasets"
-    minute: "0"
-    hour: "2"
+    minute: "30"
+    hour: "22"
     day: "*"
     month: "*"
-    weekday: "6" # Sunday
-    job: 'ckan harvester source clear {{ harvest_source_id }} && (ckan harvester job-abort {{ harvest_source_id }} || true) && (ckan harvester abort-failed-jobs || true) && ckan harvester job {{ harvest_source_id }}' 
+    weekday: "5" # Saturday
+    job: 'ckan harvester source clear {{ harvest_source_id if (env == "production") else staging_harvest_source_id }} && (ckan harvester job-abort {{ harvest_source_id if (env == "production") else staging_harvest_source_id }} || true) && (ckan harvester abort-failed-jobs || true) && ckan harvester job {{ harvest_source_id if (env == "production") else staging_harvest_source_id }}' 
     user: root

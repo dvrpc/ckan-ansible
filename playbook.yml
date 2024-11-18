@@ -73,21 +73,13 @@
     - name: Set up oauth
       include_role:
         name: oauth
-      when: env == "production"
 
     - name: Install harvest extension
       include_role:
         name: harvest
-      when: env == "production"
 
     - name: Install our custom harvest extension, built on top of other one
       include_role:
         name: dvrpc_gis_harvester
-      when: env == "production"
 
-    - name: Add basic authentication
-      include_role:
-        name: base
-        tasks_from: add_basic_auth
-      when: env == "staging"
 
