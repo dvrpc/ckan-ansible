@@ -1,0 +1,31 @@
+---
+# tasks file for swap (create a swap file)
+
+# see https://www.howtogeek.com/455981/how-to-create-a-swap-file-on-linux/
+- name: Register var to check if swapfile already exists
+  stat:
+    path: /swapfile
+  register: swapfile
+
+- name: Create swapfile
+  command: dd if=/dev/zero of=/swapfile bs=1M count=1000
+  when: not swapfile.stat.exists
+
+- name: Prepare the swapfile
+  command: mkswap /swapfile
+  when: not swapfile.stat.exists
+
+- name: Restrict swapfile permissions
+  file:
+    path: /swapfile
+    mode: 0600
+
+- name: Turn it on if not already on
+  command: swapon /swapfile
+  when: not swapfile.stat.exists
+
+- name: Add swapfile to fstab
+  lineinfile:
+    path: /etc/fstab
+    insertafter: EOF
+    line: /swapfile    none    swap    sw    0    0
