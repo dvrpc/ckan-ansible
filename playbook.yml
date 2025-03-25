@@ -47,7 +47,8 @@
             state: present
 
   roles:
-    - users
+    - role: users
+      tags: users
     - role: hardening
       tags: hardening
     - base

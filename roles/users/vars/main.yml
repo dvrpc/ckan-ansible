@@ -5,6 +5,9 @@ users:
     ssh_pub_key: "id_ed25519.pub"
   - user: jstrangfeld
     ssh_pub_key: "jstrangfeld.pub"
+  - user: ckirby
+    ssh_pub_key: "ckirby.pub"
 sudoers:
   - kwarner
   - jstrangfeld
+  - ckirby
