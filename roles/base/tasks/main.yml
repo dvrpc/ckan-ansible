@@ -17,7 +17,6 @@
 
 - name: Install and configure postgres
   block:
-
     - name: Install postgres
       apt:
         name: postgresql-12
@@ -248,7 +247,7 @@
     path: /etc/ckan/default/ckan.ini
     section: app:main
     option: ckan.plugins
-    value: stats datatables_view image_view datastore datapusher resource_proxy
+    value: stats datatables_view image_view datapusher resource_proxy
     backup: true
   notify: reload ckan
 
@@ -270,7 +269,6 @@
 
 - name: Create sysadmin
   block:
-
     - name: Register output of user list command
       command: ckan -c /etc/ckan/default/ckan.ini user list
       register: user_list
@@ -365,4 +363,3 @@
     owner: www-data
     group: www-data
     recurse: yes
-

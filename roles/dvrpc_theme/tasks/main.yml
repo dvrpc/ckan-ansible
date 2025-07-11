@@ -62,15 +62,36 @@
     value: "{{ item.value }}"
     backup: true
   loop:
-    - {option: "scheming.dataset_schemas", value: "ckanext.dvrpc_theme:{{ scheming_file }}"}
-    - {option: "scheming.presets", value: "ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json"}
-    - {option: "licenses_group_url", value: "{{ license_url }}"}
-    - {option: "ckan.dvrpcthemeplugin.gis_user", value: "{{ gis_user }}"}
-    - {option: "ckan.dvrpcthemeplugin.gis_password", value: "{{ gis_password }}"}
+    - {
+        option: "scheming.dataset_schemas",
+        value: "ckanext.dvrpc_theme:{{ scheming_file }}",
+      }
+    - {
+        option: "scheming.presets",
+        value: "ckanext.dvrpc_theme:presets.json ckanext.scheming:presets.json",
+      }
+    - { option: "licenses_group_url", value: "{{ license_url }}" }
+    - { option: "ckan.dvrpcthemeplugin.gis_user", value: "{{ gis_user }}" }
+    - {
+        option: "ckan.dvrpcthemeplugin.gis_password",
+        value: "{{ gis_password }}",
+      }
+    - {
+        option: "ckan.dvrpcthemeplugin.mapbox_access_token",
+        value: "{{ mapbox_token }}",
+      }
+    - {
+        option: "ckan.dvrpcthemeplugin.mapbox_access_token",
+        value: "{{ mapbox_token }}",
+      }
+    - {
+        option: "ckan.dvrpcthemeplugin.datastore_choices_resource",
+        value: "b7527368-a39b-4197-bad0-23a728a76bbe",
+      }
 
 - name: Add plugin to ckan.ini
   lineinfile:
     path: /etc/ckan/default/ckan.ini
     backrefs: true
     regexp: "^(.*ckan.plugins = .*)$"
-    line: '\1 dvrpc_theme dvrpc_package'
+    line: '\1 dvrpc_theme datastore dvrpc_package dvrpc_chained_action'
