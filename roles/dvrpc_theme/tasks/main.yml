@@ -96,10 +96,14 @@
         option: "ckan.dvrpcthemeplugin.datastore_choices_resource",
         value: "b7527368-a39b-4197-bad0-23a728a76bbe",
       }
+    - {
+        option: "ckan.dvrpcthemeplugin.mapbox_access_token",
+        value: "{{ mapbox_token }}",
+      }
 
 - name: Add plugins to ckan.ini
   lineinfile:
     path: /etc/ckan/default/ckan.ini
     backrefs: true
     regexp: "^(.*ckan.plugins = .*)$"
-    line: '\1 dvrpc_theme dvrpc_package'
+    line: '\1 dvrpc_theme datastore dvrpc_package dvrpc_chained_action'
