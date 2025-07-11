@@ -52,7 +52,19 @@
           multiValued: "true"
     pretty_print: true
   when: category_field.count < 1
-  notify: restart solr
+  notify:
+    - restart solr
+    - rebuild solr index
+
+- name: Change field from text to string type
+  xml:
+    path: /etc/solr/conf/schema.xml
+    xpath: /schema/fields/dynamicField[@name='res_extras_*']
+    attribute: type
+    value: string
+  notify:
+    - restart solr
+    - rebuild solr index
 
 - name: Update ckan.ini (excluding plugin list)
   ini_file:
@@ -77,21 +89,17 @@
         value: "{{ gis_password }}",
       }
     - {
-        option: "ckan.dvrpcthemeplugin.mapbox_access_token",
-        value: "{{ mapbox_token }}",
-      }
-    - {
-        option: "ckan.dvrpcthemeplugin.mapbox_access_token",
-        value: "{{ mapbox_token }}",
+        option: "ckan.extra_resource_fields",
+        value: "geo_resolution dataset_level",
       }
     - {
         option: "ckan.dvrpcthemeplugin.datastore_choices_resource",
         value: "b7527368-a39b-4197-bad0-23a728a76bbe",
       }
 
-- name: Add plugin to ckan.ini
+- name: Add plugins to ckan.ini
   lineinfile:
     path: /etc/ckan/default/ckan.ini
     backrefs: true
     regexp: "^(.*ckan.plugins = .*)$"
-    line: '\1 dvrpc_theme datastore dvrpc_package dvrpc_chained_action'
+    line: '\1 dvrpc_theme dvrpc_package'

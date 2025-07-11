@@ -19,6 +19,9 @@
         state: restarted
         enabled: true
 
+    - name: rebuild solr index
+      command: ckan -c /etc/ckan/default/ckan.ini search-index rebuild -r
+      
     - name: reload ckan
       command: supervisorctl reload
 
@@ -44,7 +47,8 @@
             state: present
 
   roles:
-    - users
+    - role: users
+      tags: users
     - role: hardening
       tags: hardening
     - base
