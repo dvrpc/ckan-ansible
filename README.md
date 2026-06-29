@@ -1,7 +1,10 @@
 # ckan-ansible
+
 Ansible project for creating DVRPC's Data Catalog (CKAN).
 
-The Data Catalog is hosted on a Digital Ocean server. During the creation of that server, add one of the system users' ssh keys (Kris Warner or Jesse Strangfeld). These users will then be able to use their corresponding private ssh keys to connect via ssh as the root user. System users are set up in the "users" role.
+The Data Catalog is hosted on a Digital Ocean server. During the creation of that server, add one of the system users' ssh keys. These users will then be able to use their corresponding private ssh keys to connect via ssh as the root user. System users are set up in the "users" role.
+
+The ansible.cfg.example files provides some defaults. Copy this file to ansible.cfg (ignored in .gitignore) and, in particular, point to the correct ssh private key to use.
 
 Inventory files for various environments (development/staging/production) are available in the inventories/ directory. Environment-specific variables are stored in these inventories, which are used within the playbook/tasks. For instance, the `dvrpc_branch_repo` specifies which branch of DVRPC's maintained CKAN extensions to use: main for the production environment and development for the staging and development environments (at least as of time of writing).
 
