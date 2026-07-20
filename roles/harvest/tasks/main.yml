@@ -62,6 +62,7 @@
       git:
         repo: https://github.com/ckan/ckanext-dcat
         dest: /usr/lib/ckan/default/src/ckanext-dcat/
+        version: v1.5.1
       register: repo
       notify:
         - restart ckan_gather_consumer
