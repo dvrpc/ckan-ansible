@@ -148,6 +148,7 @@
         ini_content:
           ckan.datastore.write_url: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/datastore_default"
           ckan.datastore.read_url: "postgresql://datastore_default:{{ datastore_default_db_pass }}@localhost/datastore_default"
+          ckan.datastore.sqlsearch.enabled: false
 
     - name: Create tables and set permissions
       shell: ckan -c /etc/ckan/default/ckan.ini datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1
