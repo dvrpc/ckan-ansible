@@ -2,7 +2,7 @@
 # tasks file for users
 - name: Add user groups
   group:
-    name: "{{ item.user }}"
+    name: "{{ item }}"
     state: present
   loop: "{{ users }}"
 
@@ -13,10 +13,10 @@
 
 - name: Add users
   user:
-    name: "{{ item.user }}"
-    group: "{{ item.user }}"
+    name: "{{ item }}"
+    group: "{{ item }}"
     shell: /bin/bash
-    home: "/home/{{ item.user }}"
+    home: "/home/{{ item }}"
     create_home: true
     state: present
   loop: "{{ users }}"
@@ -30,8 +30,8 @@
 
 - name: Add SSH public key for users
   authorized_key:
-    user: "{{ item.user }}"
-    key: "{{ lookup('file', '{{ item.ssh_pub_key }}') }}"
+    user: "{{ item }}"
+    key: "{{ lookup('file', '{{ item }}_2026.pub') }}"
     state: present
   loop: "{{ users }}"
 

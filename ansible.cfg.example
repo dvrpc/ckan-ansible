@@ -2,5 +2,5 @@
 VAULT_PASSWORD_FILE = vault_password
 stdout_callback=debug
 stderr_callback=debug
-inventory = inventories/production.yml
-private_key_file = ~/.ssh/ckirby_2026
+inventory = inventories/staging.yaml
+private_key_file = ~/.ssh/dvrpc/kwarner_2026

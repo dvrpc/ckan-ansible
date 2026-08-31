@@ -4,3 +4,4 @@ vault_password
 tags
 ve/
 config
+ansible.cfg

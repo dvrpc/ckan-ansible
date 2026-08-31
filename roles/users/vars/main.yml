@@ -1,13 +1,12 @@
 ---
 # vars file for users
 users:
-  - user: kwarner
-    ssh_pub_key: "id_ed25519.pub"
-  - user: jstrangfeld
-    ssh_pub_key: "jstrangfeld.pub"
-  - user: ckirby
-    ssh_pub_key: "ckirby.pub"
+  - kwarner
+  - jstrangfeld
+  - ckirby
+  - thachadorian
 sudoers:
   - kwarner
   - jstrangfeld
   - ckirby
+  - thachadorian
