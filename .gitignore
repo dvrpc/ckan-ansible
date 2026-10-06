@@ -5,3 +5,10 @@ tags
 ve/
 config
 ansible.cfg
+vms/*.img
+
+# staging environment
+staging/*.qcow2
+staging/*.img
+staging/*.yaml
+staging/staging_network.xml

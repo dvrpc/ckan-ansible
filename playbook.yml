@@ -21,7 +21,7 @@
 
     - name: rebuild solr index
       command: ckan -c /etc/ckan/default/ckan.ini search-index rebuild -r
-      
+
     - name: reload ckan
       command: supervisorctl reload
 
@@ -65,7 +65,7 @@
         name: base
         tasks_from: nginx_no_tls
       when: not use_tls
-    
+
     - name: Set up nginx with TLS
       include_role:
         name: base

@@ -1,0 +1,313 @@
+set dotenv-load
+set shell := ["bash", "-uc"]
+
+vms := env('VMS')
+os := env('OS')
+size := env('SIZE')
+memory := env('MEMORY')
+vcpu := env('VCPU')
+ip := env('IP')
+network := env('NETWORK')
+connection := env('CONNECTION')
+user_name := env('USER_NAME')
+ssh_pub_key := env('SSH_PUB_KEY')
+
+# List recipes.
+default:
+  @just --list --unsorted
+
+# Update to latest justfile.
+update:
+    curl -O https://codeberg.org/kdwarn/just-libvirt/raw/branch/main/justfile
+
+_generate_network_definition:
+    #!/usr/bin/env bash
+    set -u
+
+    # Create IP range.
+    ip_begin=$(echo "{{ ip }}" | cut -d '.' -f 1,2,3)
+    ip_end=$(echo "{{ ip }}" | cut -d '.' -f 4)
+
+    # Return error if the last set is > 51.  It's rather arbitrary, but we're assuming that
+    # this tool won't be used to create more than 50 VMs in a network. By rejecting anything above
+    # 51, we can set the start of the initial range at a minimum of (51 + 60) so as to avoid
+    # conflict when resetting during the `create` recipe (which will start at +9 initial number).
+    if [ ${ip_end} -ge 51 ]; then
+        echo "{{ RED }}Please use an IP address whose last set of numbers is less than 51."
+        exit 1
+    fi
+
+    ip_range_start="${ip_begin}.$((${ip_end} + 60))"
+
+    cat > staging_network.xml << EOL
+    <!--This file is generated dynamically. Do not edit.-->
+    <network>
+        <name>{{ network }}</name>
+        <forward mode='nat'>
+            <nat>
+                <port start='1024' end='65535'/>
+            </nat>
+        </forward>
+        <ip address='{{ ip }}' netmask='255.255.255.0'>
+            <dhcp>
+                <range start='${ip_range_start}' end='${ip_begin}.254'/>
+            </dhcp>
+        </ip>
+    </network>
+    EOL
+
+_generate_cloud_init_files:
+    #!/usr/bin/env bash
+    set -u
+
+    for vm in {{ vms }}; do
+        cat > "cloud_init_${vm}.yaml" << EOL
+    #cloud-config
+    # This file is generated dynamically. Do not edit.
+
+    hostname: ${vm}
+
+    users:
+      - name: {{ user_name }}
+        # so our user can just sudo without any password
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash
+        ssh_authorized_keys:
+          - {{ ssh_pub_key }}
+    EOL
+    done
+
+# Create (and start) the staging environment.
+create: destroy _generate_network_definition _generate_cloud_init_files
+    #!/usr/bin/env bash
+    set -u
+
+    just _cp-img-for-vms
+
+    # Create and start the network.
+    echo
+    virsh --connect "{{ connection }}" net-define staging_network.xml
+    virsh --connect "{{ connection }}" net-start "{{ network }}"
+
+    # Create the VMs.
+    # Get the variables as arrays so we can loop over with index.
+    vms=({{ vms }})
+    os=({{ os }})
+    size=({{ size }})
+    memory=({{ memory }})
+    vcpu=({{ vcpu }})
+
+    for i in ${!vms[@]}; do
+        echo
+        echo "vm name: ${vms[i]}"
+        echo "os: ${os[i]}"
+
+        virt-install \
+          --name ${vms[i]} \
+          --memory $((${memory[i]} * 1024)) \
+          --vcpus ${vcpu[i]} \
+          --disk ./"${vms[i]}.qcow2" \
+          --cloud-init user-data=./cloud_init_${vms[i]}.yaml,disable=on \
+          --connect {{ connection }} \
+          --network network={{ network }} \
+          --osinfo="${os[i]}" \
+          --import \
+          --noautoconsole
+    done
+
+    sleep=30
+    echo "Sleeping for ${sleep} seconds to wait for vm creation."
+    sleep ${sleep}
+
+    # Get begining and end of static IP addresses.
+    ip_begin=$(echo "{{ ip }}" | cut -d '.' -f 1,2,3)
+    ip_end=$(echo "{{ ip }}" | cut -d '.' -f 4)
+
+    for i in ${!vms[@]}; do
+        # Create each IP.
+        ip=${ip_begin}.$((${ip_end} + ${i} + 9))
+
+        # remove ip address from known_hosts
+        ssh-keygen -f ~/.ssh/known_hosts -R ${ip}
+
+        echo ${vms[i]}
+        mac=$(virsh --connect "{{ connection }}" domifaddr ${vms[i]} | tail -n2 | head -n1 | tr -s ' ' | cut -d ' ' -f 3)
+        virsh --connect "{{ connection }}" net-update "{{ network }}" add ip-dhcp-host \
+          "<host mac='${mac}' name='${vms[i]}' ip='${ip}' />" \
+           --config --live
+        sleep 5
+    done
+
+    sleep 5
+
+    # Stop and restart vms for the IP address to take effect.
+    echo
+    just _vms-stop
+    sleep 5
+
+    just _vms-start
+    sleep 5
+
+    echo "Showing current network addresses"
+    virsh --connect "{{ connection }}" net-dhcp-leases "{{ network }}"
+
+
+# Show status of staging environment.
+status:
+    #!/usr/bin/env bash
+    set -u
+    for vm in {{ vms }};  do
+        virsh --connect "{{ connection }}" dominfo "${vm}"
+    done
+    virsh --connect "{{ connection }}" net-info "{{ network }}"
+    virsh --connect "{{ connection }}" net-dhcp-leases "{{ network }}"
+
+# Start the staging environment.
+@start:
+    -virsh --connect "{{ connection }}" net-start "{{ network }}"
+    just _vms-start
+
+# Stop the staging environment.
+@stop:
+    just _vms-stop
+    -virsh --connect "{{ connection }}" net-destroy "{{ network }}"
+
+# Destroy the staging environment.
+[confirm("If there is an existing staging environment, it will be destroyed. Proceed?")]
+destroy:
+    #!/usr/bin/env bash
+    set -u
+
+    # Stop/destroy network.
+    if virsh --connect "{{ connection }}" net-info "{{ network }}" &>/dev/null; then
+        virsh --connect "{{ connection }}" net-destroy "{{ network }}"
+        virsh --connect "{{ connection }}" net-undefine "{{ network }}"
+        rm -f staging_network.xml
+    fi
+
+    # Stop/destroy VMs.
+    for vm in {{ vms }}; do
+        if virsh --connect "{{ connection }}" dominfo ${vm} &>/dev/null; then
+            virsh --connect "{{ connection }}" shutdown ${vm}
+            virsh --connect "{{ connection }}" undefine ${vm}
+        fi
+    done
+
+    for vm in {{ vms }}; do
+        rm -f "${vm}.qcow2"
+    done
+
+    for vm in {{ vms }}; do
+        rm -f "cloud_init_${vm}.yaml"
+    done
+
+    # Sleep to give time for deleting files, otherwise when this is called as dependency
+    # of `create`, file may still be there.
+    sleep 2
+
+# Download latest OS images.
+_dl-latest-os-images:
+    #!/usr/bin/env bash
+
+    for os in {{ os }}; do
+        if [ ${os} = "debian13" ]; then
+            url=https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2
+        elif [ ${os} = "debian12" ]; then
+            url=https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
+        elif [ ${os} = "debian11" ]; then
+            url=https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-amd64.qcow2
+        elif [ ${os} = "ubuntu25.10" ]; then
+            url=https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img
+        elif [ ${os} = "ubuntu25.04" ]; then
+            url=https://cloud-images.ubuntu.com/plucky/current/plucky-server-cloudimg-amd64.img
+        elif [ ${os} = "ubuntu24.04" ]; then
+            url=https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+        elif [ ${os} = "ubuntu22.04" ]; then
+            url=https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
+        elif [ ${os} = "ubuntu20.04" ]; then
+            url=https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img
+        elif [ ${os} = "ubuntu18.04" ]; then
+            url=https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
+        else
+            echo "Not configured for ${os}."
+            exit 1
+        fi
+        # Extract filename from the path so that we can see if one is already downloaded that
+        # matches date of one on server.
+        filename=${url##*/}
+        echo $filename
+        echo "Downloading ${os} image."
+        curl -L -o ${filename} -z ${filename} ${url}
+    done
+
+# Make copies of the OS image for each VM.
+_cp-img-for-vms: _dl-latest-os-images
+    #!/usr/bin/env bash
+    set -u
+
+    vms=({{ vms }})
+    os=({{ os }})
+    size=({{ size }})
+
+    for i in ${!vms[@]}; do
+        if [ ${os[i]} = "debian13" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --no-sparse --expand /dev/sda1 debian-13-generic-amd64.qcow2 "${vms[i]}.qcow2"
+        elif [ ${os[i]} = "debian12" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 debian-12-generic-amd64.qcow2 "${vms[i]}.qcow2"
+        elif [ ${os[i]} = "debian11" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 debian-11-generic-amd64.qcow2 "${vms[i]}.qcow2"
+        elif [ ${os[i]} = "ubuntu25.10" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 questing-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
+        elif [ ${os[i]} = "ubuntu25.04" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 plucky-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
+        elif [ ${os[i]} = "ubuntu24.04" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --no-sparse --expand /dev/sda1 noble-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
+        elif [ ${os[i]} = "ubuntu22.04" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 jammy-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
+        elif [ ${os[i]} = "ubuntu20.04" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 focal-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
+        elif [ ${os[i]} = "ubuntu18.04" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 bionic-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
+        else
+            echo "Not configured for ${os[i]}."
+            exit 1
+        fi
+    done
+
+# Start all the VMs.
+_vms-start:
+    #!/usr/bin/env bash
+    set -u
+    for vm in {{ vms }}; do
+        virsh --connect "{{ connection }}" start ${vm}
+    done
+
+# Stop all the VMs.
+_vms-stop:
+    #!/usr/bin/env bash
+    set -u
+    for vm in {{ vms }}; do
+        virsh --connect "{{ connection }}" shutdown ${vm} || true
+    done
+

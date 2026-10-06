@@ -1,0 +1,9 @@
+all:
+  hosts:
+    ckan:
+      ansible_host: 192.168.110.10
+      env: staging
+      domain: ckan.local
+      update_ckan: false
+      use_tls: false
+      dvrpc_git_branch: development
