@@ -4,8 +4,6 @@
 # user.
 - hosts: ckan
   become: true
-  vars:
-    ve_dir: /usr/lib/ckan/default
 
   pre_tasks:
     - name: Update apt cache
@@ -18,14 +16,8 @@
           apt:
             name:
               - python3-pip
+              - python3-psycopg2
               - acl
-            state: present
-
-        - name: Install psycopg2
-          pip:
-            name:
-              - psycopg2-binary
-              - lxml
             state: present
 
   roles:
