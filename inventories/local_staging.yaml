@@ -4,7 +4,7 @@ all:
       ansible_host: 192.168.110.10
       env: staging
       domain: ckan.local
-      update_ckan: false
+      update_ckan: true
       use_tls: false
       dvrpc_git_branch: development
       ckan_dir: "/usr/lib/ckan/default"
