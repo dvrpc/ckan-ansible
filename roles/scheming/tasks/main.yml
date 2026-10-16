@@ -13,9 +13,10 @@
     virtualenv: "{{ ve_dir }}"
   when: repo.changed or ckan_package.changed
 
-- name: Add plugin to ckan.ini
+- name: Add plugin to ckan.plugins setting if not already in it
   lineinfile:
-    path: /etc/ckan/default/ckan.ini
+    path: "{{ ckan_ini_path }}"
     backrefs: true
-    regexp: "^(.*ckan.plugins = .*)$"
+    regexp: "^(?!.* scheming_datasets)(ckan.plugins =.*)"
     line: '\1 scheming_datasets'
+  notify: reload ckan

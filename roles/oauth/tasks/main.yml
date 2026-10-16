@@ -34,9 +34,10 @@
     - {option: "ckan.oauth2.profile_api_mail_field", value: "{{ profile_api_mail_field }}"}
     - {option: "ckan.oauth2.authorization_header", value: "{{ authorization_header }}"}
 
-- name: Add plugin to ckan.ini
+- name: Add plugin to ckan.plugins setting if not already in it
   lineinfile:
-    path: /etc/ckan/default/ckan.ini
+    path: "{{ ckan_ini_path }}"
     backrefs: true
-    regexp: "^(.*ckan.plugins = .*)$"
+    regexp: "^(?!.* oauth2)(ckan.plugins =.*)"
     line: '\1 oauth2'
+  notify: reload ckan

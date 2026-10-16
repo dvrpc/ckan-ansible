@@ -117,7 +117,7 @@
   register: tables_created
 
 - name: Initialize database
-  command: /usr/lib/ckan/default/bin/ckan -c /etc/ckan/default/ckan.ini db init
+  command: "{{ckan_dir}}/bin/ckan -c /etc/ckan/default/ckan.ini db init"
   when: not tables_created.query_result.0.exists
 
 - name: Install Datastore plugin
@@ -138,7 +138,7 @@
 
     - name: Update ckan.ini
       ini_file:
-        path: /etc/ckan/default/ckan.ini
+        path: "{{ ckan_ini_path }}"
         section: app:main
         option: "{{ item.key }}"
         value: "{{ item.value }}"
@@ -149,17 +149,26 @@
           ckan.datastore.write_url: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/datastore_default"
           ckan.datastore.read_url: "postgresql://datastore_default:{{ datastore_default_db_pass }}@localhost/datastore_default"
           ckan.datastore.sqlsearch.enabled: false
+      notify: reload ckan
+
+    - name: Add plugin to ckan.plugins setting if not already in it
+      lineinfile:
+        path: "{{ ckan_ini_path }}"
+        backrefs: true
+        regexp: "^(?!.* datastore)(ckan.plugins =.*)"
+        line: '\1 datastore'
+      notify: reload ckan
 
     - name: Create tables and set permissions
-      shell: ckan -c /etc/ckan/default/ckan.ini datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1
+      shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
       when: datastore_database.changed
   notify: reload ckan
 
-- name: Install v0.6.0 of flask-login to fix compatibility issues
-  pip:
-    virtualenv: /usr/lib/ckan/datapusher
-    name: flask_login
-    version: 0.6.0
+# - name: Install v0.6.0 of flask-login to fix compatibility issues
+#   pip:
+#     virtualenv: /usr/lib/ckan/datapusher
+#     name: flask_login
+#     version: 0.6.0
 
 - name: Configure filestore
   block:
@@ -171,12 +180,12 @@
 
     - name: Add storage path to ckan ini
       ini_file:
-        path: /etc/ckan/default/ckan.ini
+        path: "{{ ckan_ini_path }}"
         section: app:main
         option: ckan.storage_path
         value: /var/lib/ckan/default
         backup: true
-  notify: reload ckan
+      notify: reload ckan
 
 - name: Configure datapusher
   block:
@@ -233,15 +242,18 @@
           lazy-apps: true
       when: ckan_package.changed
 
-    - name: Update supervisor to use the configuration file we just edited
-      ini_file:
-        path: /etc/supervisor/conf.d/ckan-datapusher.conf
-        section: program:ckan-datapusher
-        option: command
-        value: /usr/lib/ckan/datapusher/bin/uwsgi -i /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher-uwsgi.ini
-        no_extra_spaces: true
-      when: ckan_package.changed
-  notify: reload ckan
+    - name: Install further dependencies
+      pip:
+        name: requests[security]
+        virtualenv: /usr/lib/ckan/default
+
+    - name: Add plugin to ckan.plugins setting if not already in it
+      lineinfile:
+        path: "{{ ckan_ini_path }}"
+        backrefs: true
+        regexp: "^(?!.* xloader)(ckan.plugins =.*)"
+        line: '\1 xloader'
+      notify: reload ckan
 
 - name: Update plugins in ckan.ini
   ini_file:
@@ -254,7 +266,7 @@
 
 - name: Define default resource views
   ini_file:
-    path: /etc/ckan/default/ckan.ini
+    path: "{{ ckan_ini_path }}"
     section: app:main
     option: ckan.views.default_views
     value: image_view text_view datatables_view
@@ -306,7 +318,7 @@
   block:
     - name: Add setting to ckan ini
       ini_file:
-        path: /etc/ckan/default/ckan.ini
+        path: "{{ ckan_ini_path }}"
         section: app:main
         option: ckan.tracking_enabled
         value: "true"
@@ -317,7 +329,7 @@
         name: "Update tracking summary data"
         minute: "0"
         hour: "4"
-        job: "ckan -c /etc/ckan/default/ckan.ini tracking update && ckan -c /etc/ckan/default/ckan.ini search-index rebuild -r"
+        job: "{{ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} tracking update && {{ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} search-index rebuild -r"
         user: root
 
     - name: Add script to get top 10 most viewed datasets
