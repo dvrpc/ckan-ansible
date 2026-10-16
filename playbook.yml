@@ -3,8 +3,6 @@
 # own anytime changes need to be made.
 - hosts: ckan
   become: true
-  vars:
-    ve_dir: /usr/lib/ckan/default
 
   handlers:
     - name: reload nginx
@@ -15,7 +13,7 @@
 
     - name: restart solr
       service:
-        name: tomcat9
+        name: solr
         state: restarted
         enabled: true
 
@@ -36,14 +34,10 @@
           apt:
             name:
               - python3-pip
+              - python3-psycopg2
               - acl
-            state: present
-
-        - name: Install psycopg2
-          pip:
-            name:
-              - psycopg2-binary
-              - lxml
+              - unzip
+              # - lxml # not sure if needed
             state: present
 
   roles:
@@ -51,7 +45,8 @@
       tags: users
     - role: hardening
       tags: hardening
-    - base
+    - role: base
+      tags: base
     - dvrpc_theme
     - scheming
     - pdfview
@@ -78,12 +73,12 @@
       include_role:
         name: oauth
 
-    - name: Install harvest extension
-      include_role:
-        name: harvest
+    # - name: Install harvest extension
+    #   include_role:
+    #     name: harvest
 
-    - name: Install our custom harvest extension, built on top of other one
-      include_role:
-        name: dvrpc_gis_harvester
+    # - name: Install our custom harvest extension, built on top of other one
+    #   include_role:
+    #     name: dvrpc_gis_harvester
 
 
