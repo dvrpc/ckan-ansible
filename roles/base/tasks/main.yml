@@ -1,17 +1,26 @@
 ---
 # tasks to install CKAN with only base plugins (datastore, filestore, datapusher)
-- name: Install CKAN required packages
+- name: Install required system packages
   apt:
     name:
       - libpq5
       - redis-server
       - nginx
       - supervisor
+      # these ones required for installation from source, but not package
+      - python3-dev
+      - libpq-dev
+      - python3-pip
+      - python3-venv
+      - git-core
+      - libmagic1
     state: present
 
-- name: Install the CKAN package
-  apt:
-    deb: https://packaging.ckan.org/python-ckan_2.9-py3-focal_amd64.deb
+- name: Install CKAN from source into virtual environment
+  pip:
+    name: git+https://github.com/ckan/ckan.git@ckan-2.12.0#egg=ckan[requirements]
+    virtualenv: "{{ ckan_dir }}"
+    virtualenv_command: "python3 -m venv"
   register: ckan_package
 
 - name: Check if ckan.ini exists
@@ -39,9 +48,9 @@
 
 - name: Install and configure postgres
   block:
-    - name: Install postgres
+    - name: Install postgres # whatever version is available for required version of Ubuntu.
       apt:
-        name: postgresql-12
+        name: postgresql
         state: present
 
     - name: Create db user
@@ -61,18 +70,44 @@
     - name: Grant privileges
       become: true
       become_user: postgres
-      postgresql_user:
-        db: ckan_default
-        name: ckan_default
+      postgresql_privs:
+        login_db: ckan_default
+        roles: ckan_default
+        type: database
         priv: "ALL"
 
     - name: Update ckan.ini file to include connection string
       ini_file:
-        path: /etc/ckan/default/ckan.ini
+        path: "{{ ckan_ini_path }}"
         section: app:main
         option: sqlalchemy.url
         value: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/ckan_default"
         backup: true
+
+- name: Create sysadmin
+  block:
+    - name: Register output of user list command
+      command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini user list"
+      register: user_list
+      changed_when: false
+
+    - name: Register output of sysadmin list command
+      command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini sysadmin list"
+      register: sysadmin_list
+      changed_when: false
+
+    - name: Create user
+      expect:
+        command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini user add {{ sysadmin }} email={{ sysadmin_email }} name={{ sysadmin }}"
+        responses:
+          "Password ": "{{ sysadmin_pass }}"
+          "Repeat for confirmation": "{{ sysadmin_pass }}"
+      when: sysadmin not in user_list.stdout
+
+    - name: Make that user a sysadmin
+      command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini sysadmin add {{ sysadmin }}"
+      when: sysadmin not in sysadmin_list.stdout
+  notify: reload ckan
 
 - name: Install and configure solr
   block:
@@ -123,7 +158,7 @@
 
 - name: Update site_url in ckan ini
   ini_file:
-    path: /etc/ckan/default/ckan.ini
+    path: "{{ ckan_ini_path }}"
     section: app:main
     option: ckan.site_url
     value: "http{% if use_tls %}s{% endif %}://{{ domain }}"
@@ -296,40 +331,15 @@
   notify: reload ckan
 
 - name: Update ckan_default and datastore_default db permissions via script
-  command: "ckan -c /etc/ckan/default/ckan.ini datastore set-permissions"
+  command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions"
   when: ckan_package.changed
   notify:
     - reload nginx
     - reload ckan
 
-- name: Create sysadmin
-  block:
-    - name: Register output of user list command
-      command: ckan -c /etc/ckan/default/ckan.ini user list
-      register: user_list
-      changed_when: false
-
-    - name: Register output of sysadmin list command
-      command: ckan -c /etc/ckan/default/ckan.ini sysadmin list
-      register: sysadmin_list
-      changed_when: false
-
-    - name: Create user
-      expect:
-        command: "ckan -c /etc/ckan/default/ckan.ini user add {{ sysadmin }} email={{ sysadmin_email }} name={{ sysadmin }}"
-        responses:
-          "Password ": "{{ sysadmin_pass }}"
-          "Repeat for confirmation": "{{ sysadmin_pass }}"
-      when: sysadmin not in user_list.stdout
-
-    - name: Make that user a sysadmin
-      command: ckan -c /etc/ckan/default/ckan.ini sysadmin add "{{ sysadmin }}"
-      when: sysadmin not in sysadmin_list.stdout
-  notify: reload ckan
-
 - name: CORS - allow all origins
   ini_file:
-    path: /etc/ckan/default/ckan.ini
+    path: "{{ ckan_ini_path }}"
     section: app:main
     option: ckan.cors.origin_allow_all
     value: "true"
