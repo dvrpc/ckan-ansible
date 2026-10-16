@@ -2,6 +2,11 @@
 - name: Include secrets
   include_vars: secrets.yml
 
+- name: Install dependencies into virtual environment
+  pip:
+    name: lxml
+    virtualenv: "{{ ckan_dir }}"
+
 - name: Create directory to put ssh keys into
   file:
     path: /ssh_keys
