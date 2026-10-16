@@ -33,20 +33,13 @@
     path: "{{ ckan_ini_dir }}"
     state: directory
 
-- name: Upload CKAN ini file, which will be modified later
-  copy:
-    src: ckan.ini
+- name: Upload initial version of CKAN ini file, which will be modified by other tasks.
+  template:
+    src: ckan.ini.j2
     dest: "{{ ckan_ini_path }}"
   when: not ini.stat.exists
 
-# - name: Install the CKAN package
-#   apt:
-#     deb: https://packaging-ckan-org.s3-eu-west-1.amazonaws.com/python-ckan_2.12-jammy_amd64.deb
-#     # deb: https://packaging.ckan.org/python-ckan_2.12-jammy_amd64.deb
-#   register: ckan_package
-#   when: update_ckan
-
-# This is what plugins (before datastore and datapusher) we previously started with
+# This is what plugins (before datastore?) we previously started with
 # - name: Update plugins in ckan.ini
 #   ini_file:
 #     path: "{{ ckan_ini_path }}"
@@ -57,7 +50,7 @@
 #   notify: reload ckan
 - name: Install and configure postgres
   block:
-    - name: Install postgres # whatever version is available for required version of Ubuntu.
+    - name: Install postgres
       apt:
         name: postgresql
         state: present
@@ -183,7 +176,7 @@
   register: tables_created
 
 - name: Initialize database
-  command: "{{ckan_dir}}/bin/ckan -c /etc/ckan/default/ckan.ini db init"
+  command: "{{ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} db init"
   when: not tables_created.query_result.0.exists
 
 - name: Install Datastore plugin
@@ -253,65 +246,22 @@
         backup: true
       notify: reload ckan
 
-- name: Configure datapusher
+# NOTE: might still have to do additional work to migrate from data pusher, see
+# <ckanext.xloader.formats = csv application/csv xls application/vnd.ms-excel>
+# In particular, "freeze the column types (in the data dictionaries), so that XLoader doesn't
+# change them back to string on next xload:"
+- name: Install and configure XLoader (officially supported replacement of datapusher)
   block:
-    - name: Install psycopg2 in datapusher virtual environment
+
+    - name: Install Xloader into CKAN virtual environment
       pip:
-        virtualenv: /usr/lib/ckan/datapusher
-        name: psycopg2-binary
-
-    - name: Create database user
-      postgresql_user:
-        name: datapusher_jobs
-        password: "{{ datapusher_jobs_db_pass }}"
-      become_user: postgres
-
-    - name: Create database
-      postgresql_db:
-        name: datapusher_jobs
-        owner: datapusher_jobs
-      become_user: postgres
-
-    - name: Add datapusher settings to ckan ini
-      ini_file:
-        path: /etc/ckan/default/ckan.ini
-        section: app:main
-        option: "{{ item.key }}"
-        value: "{{ item.value }}"
-        backup: true
-      loop: "{{ ini_content | dict2items }}"
-      vars:
-        ini_content:
-          ckan.datapusher.url: "http://127.0.0.1:8800"
-          ckan.datapusher.formats: csv xls xlsx tsv application/csv application/vnd.ms-excel application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-
-    - name: Update datapusher_settings.py
-      template:
-        src: datapusher_settings.py.j2
-        dest: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher_settings.py
-        mode: 0644
-      when: ckan_package.changed
-
-    - name: Configure better performance
-      ini_file:
-        path: /usr/lib/ckan/datapusher/src/datapusher/deployment/datapusher-uwsgi.ini
-        section: uwsgi
-        option: "{{ item.key }}"
-        value: "{{ item.value }}"
-        backup: true
-        mode: 0644
-      loop: "{{ ini_content | dict2items }}"
-      vars:
-        ini_content:
-          workers: 3
-          threads: 3
-          lazy-apps: true
-      when: ckan_package.changed
+        name: ckanext-xloader
+        virtualenv: /usr/lib/ckan/default
 
     - name: Install further dependencies
       pip:
         name: requests[security]
-        virtualenv: /usr/lib/ckan/default
+        virtualenv: "{{ ckan_dir }}"
 
     - name: Add plugin to ckan.plugins setting if not already in it
       lineinfile:
@@ -321,23 +271,50 @@
         line: '\1 xloader'
       notify: reload ckan
 
-- name: Update plugins in ckan.ini
-  ini_file:
-    path: /etc/ckan/default/ckan.ini
-    section: app:main
-    option: ckan.plugins
-    value: stats datatables_view image_view datapusher resource_proxy
-    backup: true
-  notify: reload ckan
+    - name: Check if API token already made for Xloader
+      command:
+        cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user token list default"
+      register: xloader_token
 
-- name: Define default resource views
-  ini_file:
-    path: "{{ ckan_ini_path }}"
-    section: app:main
-    option: ckan.views.default_views
-    value: image_view text_view datatables_view
-    backup: true
-  notify: reload ckan
+    - name: View register var
+      debug:
+        msg: "{{ xloader_token.stdout }}"
+
+    - name: View register var
+      debug:
+        msg: "{{ xloader_token.stdout.find('xloader') }}"
+
+    - name: Create token for Xloader
+      shell: "{{ ckan_dir }}/bin/ckan config-tool {{ ckan_ini_path }} ckanext.xloader.api_token=$({{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user token add default xloader | tail -n 1 | tr -d '\t')"
+      when: xloader_token.stdout.find("xloader") == -1
+
+    - name: Update ckan.ini file to include connection string
+      ini_file:
+        path: "{{ ckan_ini_path }}"
+        section: app:main
+        option: ckanext.xloader.jobs_db.url
+        value: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/ckan_default"
+        backup: true
+      notify: reload ckan
+
+    - name: Update ckan.ini file to include formats to handle
+      ini_file:
+        path: "{{ ckan_ini_path }}"
+        section: app:main
+        option: ckanext.xloader.formats
+        value: "csv xls xlsx tsv application/csv application/vnd.ms-excel application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        backup: true
+      notify: reload ckan
+
+
+# - name: Define default resource views
+#   ini_file:
+#     path: "{{ ckan_ini_path }}"
+#     section: app:main
+#     option: ckan.views.default_views
+#     value: image_view text_view datatables_view
+#     backup: true
+#   notify: reload ckan
 
 - name: Update ckan_default and datastore_default db permissions via script
   command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions"
