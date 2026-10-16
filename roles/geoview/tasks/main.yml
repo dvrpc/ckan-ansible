@@ -10,7 +10,7 @@
 #   pip:
 #     name: /usr/lib/ckan/default/src/ckanext-geoview/
 #     editable: true
-#     virtualenv: "{{ ve_dir }}"
+#     virtualenv: "{{ ckan_dir }}"
 #   when: repo.changed or ckan_package.changed
 
 # multiple plugins come with this repo, we're interested in geojson_view

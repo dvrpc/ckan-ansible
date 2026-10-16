@@ -11,7 +11,7 @@
   pip:
     name: /usr/lib/ckan/default/src/ckanext-oauth2/
     editable: true
-    virtualenv: "{{ ve_dir }}"
+    virtualenv: "{{ ckan_dir }}"
   when: repo.changed or ckan_package.changed
   notify: reload ckan
 

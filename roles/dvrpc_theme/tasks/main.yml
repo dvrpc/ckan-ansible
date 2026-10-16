@@ -26,9 +26,9 @@
 
 - name: Install the plugin
   pip:
-    name: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
+    name: "{{ ckan_dir }}/src/ckanext-dvrpc_theme/"
     editable: true
-    virtualenv: "{{ ve_dir }}"
+    virtualenv: "{{ ckan_dir }}"
   when: repo.changed or ckan_package.changed
   notify: reload ckan
 

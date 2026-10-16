@@ -13,7 +13,29 @@
   apt:
     deb: https://packaging.ckan.org/python-ckan_2.9-py3-focal_amd64.deb
   register: ckan_package
-  when: update_ckan
+
+- name: Check if ckan.ini exists
+  stat:
+    path: "{{ ckan_ini_path }}"
+  register: ini
+
+- name: Make directory for CKAN ini
+  file:
+    path: "{{ ckan_ini_dir }}"
+    state: directory
+
+- name: Upload CKAN ini file, which will be modified later
+  copy:
+    src: ckan.ini
+    dest: "{{ ckan_ini_path }}"
+  when: not ini.stat.exists
+
+# - name: Install the CKAN package
+#   apt:
+#     deb: https://packaging-ckan-org.s3-eu-west-1.amazonaws.com/python-ckan_2.12-jammy_amd64.deb
+#     # deb: https://packaging.ckan.org/python-ckan_2.12-jammy_amd64.deb
+#   register: ckan_package
+#   when: update_ckan
 
 - name: Install and configure postgres
   block:

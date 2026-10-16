@@ -11,7 +11,7 @@
   pip:
     name: /usr/lib/ckan/default/src/ckanext-dvrpc_gis_harvester
     editable: true
-    virtualenv: "{{ ve_dir }}"
+    virtualenv: "{{ ckan_dir }}"
   when: repo.changed or ckan_package.changed
 
 - name: Add profile to ckan.ini
@@ -36,5 +36,5 @@
     day: "*"
     month: "*"
     weekday: "5" # Saturday
-    job: 'ckan harvester source clear {{ harvest_source_id if (env == "production") else staging_harvest_source_id }} && (ckan harvester job-abort {{ harvest_source_id if (env == "production") else staging_harvest_source_id }} || true) && (ckan harvester abort-failed-jobs || true) && ckan harvester job {{ harvest_source_id if (env == "production") else staging_harvest_source_id }}' 
+    job: 'ckan harvester source clear {{ harvest_source_id if (env == "production") else staging_harvest_source_id }} && (ckan harvester job-abort {{ harvest_source_id if (env == "production") else staging_harvest_source_id }} || true) && (ckan harvester abort-failed-jobs || true) && ckan harvester job {{ harvest_source_id if (env == "production") else staging_harvest_source_id }}'
     user: root
