@@ -2,10 +2,19 @@
 - name: Include secrets
   include_vars: secrets.yml
 
-- name: Install dependencies into virtual environment
-  pip:
-    name: lxml
-    virtualenv: "{{ ckan_dir }}"
+- name: Update apt cache
+  apt: update_cache=yes cache_valid_time=3600
+
+- name: Install system packages
+  apt:
+    name:
+      - python3-lxml # required for the ansible module community.general.xml
+    state: present
+
+# - name: Install dependencies into virtual environment
+#   pip:
+#     name: lxml
+    # virtualenv: "{{ ckan_dir }}"
 
 - name: Create directory to put ssh keys into
   file:
@@ -23,7 +32,7 @@
 - name: Clone our theme plugin repo
   git:
     repo: git@github.com:dvrpc/ckanext-dvrpc_theme
-    dest: /usr/lib/ckan/default/src/ckanext-dvrpc_theme/
+    dest: "{{ ckan_dir }}/src/ckanext-dvrpc_theme/"
     version: "{{ dvrpc_git_branch }}"
     accept_hostkey: true
     key_file: /ssh_keys/ckan_dvrpc_theme_repo
@@ -34,19 +43,19 @@
     name: "{{ ckan_dir }}/src/ckanext-dvrpc_theme/"
     editable: true
     virtualenv: "{{ ckan_dir }}"
-  when: repo.changed or ckan_package.changed
+  when: repo.changed
   notify: reload ckan
 
 - name: Register var to check if category already added
-  xml:
-    path: /etc/solr/conf/schema.xml
+  community.general.xml:
+    path: "{{ solr_ckan_core_custom_schema }}"
     xpath: /schema/fields/field[@name="category"]
     count: true
   register: category_field
 
 - name: Make category a multi-value field
   xml:
-    path: /etc/solr/conf/schema.xml
+    path: "{{ solr_ckan_core_custom_schema }}"
     xpath: /schema/fields
     add_children:
       - field:
@@ -63,7 +72,7 @@
 
 - name: Change field from text to string type
   xml:
-    path: /etc/solr/conf/schema.xml
+    path: "{{ solr_ckan_core_custom_schema }}"
     xpath: /schema/fields/dynamicField[@name='res_extras_*']
     attribute: type
     value: string
@@ -73,7 +82,7 @@
 
 - name: Update ckan.ini (excluding plugin list)
   ini_file:
-    path: /etc/ckan/default/ckan.ini
+    path: "{{ ckan_ini_path }}"
     section: app:main
     option: "{{ item.option }}"
     value: "{{ item.value }}"

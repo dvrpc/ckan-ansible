@@ -81,7 +81,7 @@
     - name: Check if https version of the file has already been uploaded
       tags: tls
       lineinfile:
-        path: "/etc/nginx/sites-available/{{ nginx_server_filename}}"
+        path: "/etc/nginx/sites-available/ckan"
         search_string: 443
         state: absent
       check_mode: true
@@ -92,7 +92,7 @@
       tags: tls
       copy:
         src: nginx_conf_wellknown
-        dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
+        dest: "/etc/nginx/sites-available/ckan"
         owner: root
         group: root
         mode: 0640
@@ -142,7 +142,7 @@
   tags: tls
   template:
     src: nginx_conf_tls.j2
-    dest: "/etc/nginx/sites-available/{{ nginx_server_filename }}"
+    dest: "/etc/nginx/sites-available/ckan"
     owner: root
     group: root
     mode: 0640

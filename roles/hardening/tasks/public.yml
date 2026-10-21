@@ -17,6 +17,8 @@
     policy: deny
   notify: reload ufw
 
+# TODO: on first run of playbook_init playbook, this results in error saying "Could not find the
+# requested service sshd: host" - unsure why but would be nice to fix though not crucial.
 - name: Add tighter ssh security options than default
   copy:
     src: sshd_config.conf

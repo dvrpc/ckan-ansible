@@ -7,6 +7,3 @@ all:
       update_ckan: true
       use_tls: false
       dvrpc_git_branch: development
-      ckan_dir: "/usr/lib/ckan/default"
-      ckan_ini_dir: "/etc/ckan/default"
-      ckan_ini_path: "{{ckan_ini_dir}}/ckan.ini"

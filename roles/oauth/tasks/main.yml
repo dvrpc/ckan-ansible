@@ -12,7 +12,7 @@
     name: /usr/lib/ckan/default/src/ckanext-oauth2/
     editable: true
     virtualenv: "{{ ckan_dir }}"
-  when: repo.changed or ckan_package.changed
+  when: repo.changed
   notify: reload ckan
 
 - name: Update ckan.ini (excluding plugin list)

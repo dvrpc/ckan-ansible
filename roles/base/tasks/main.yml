@@ -14,6 +14,7 @@
       - python3-venv
       - git-core
       - libmagic1
+      - postfix
     state: present
 
 - name: Install CKAN from source into virtual environment
@@ -22,6 +23,11 @@
     virtualenv: "{{ ckan_dir }}"
     virtualenv_command: "python3 -m venv"
   register: ckan_package
+
+- name: Install further dependencies
+  pip:
+    name: ckanapi
+    virtualenv: "{{ ckan_dir }}"
 
 - name: Check if ckan.ini exists
   stat:
@@ -39,6 +45,14 @@
     dest: "{{ ckan_ini_path }}"
   when: not ini.stat.exists
 
+- name: Update site_url in ckan ini
+  ini_file:
+    path: "{{ ckan_ini_path }}"
+    section: app:main
+    option: ckan.site_url
+    # TODO: check if a better way to do this is used in cloud-ansible (scheme?)
+    value: "http{% if use_tls %}s{% endif %}://{{ domain }}"
+
 # This is what plugins (before datastore?) we previously started with
 # - name: Update plugins in ckan.ini
 #   ini_file:
@@ -46,7 +60,6 @@
 #     section: app:main
 #     option: ckan.plugins
 #     value: stats datatables_view image_view datapusher resource_proxy
-#     backup: true
 #   notify: reload ckan
 - name: Install and configure postgres
   block:
@@ -84,87 +97,95 @@
         section: app:main
         option: sqlalchemy.url
         value: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/ckan_default"
-        backup: true
 
-- name: Create sysadmin
-  block:
-    - name: Register output of user list command
-      command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini user list"
-      register: user_list
-      changed_when: false
 
-    - name: Register output of sysadmin list command
-      command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini sysadmin list"
-      register: sysadmin_list
-      changed_when: false
-
-    - name: Create user
-      expect:
-        command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini user add {{ sysadmin }} email={{ sysadmin_email }} name={{ sysadmin }}"
-        responses:
-          "Password ": "{{ sysadmin_pass }}"
-          "Repeat for confirmation": "{{ sysadmin_pass }}"
-      when: sysadmin not in user_list.stdout
-
-    - name: Make that user a sysadmin
-      command: "{{ ckan_dir }}/bin/ckan -c /etc/ckan/default/ckan.ini sysadmin add {{ sysadmin }}"
-      when: sysadmin not in sysadmin_list.stdout
-  notify: reload ckan
-
+# <https://docs.ckan.org/en/2.12/maintaining/installing/install-from-source.html#setup-solr>
+# <https://solr.apache.org/guide/solr/9_11/deployment-guide/installing-solr.html>
 - name: Install and configure solr
   block:
-    - name: Install solr
+    - name: Install solr dependencies
       apt:
-        name: solr-tomcat
+        name: openjdk-11-jdk
         state: present
 
-    - name: Change port
-      xml:
-        path: /etc/tomcat9/server.xml
-        xpath: /Server/Service[@name="Catalina"]/Connector
-        value: "8983"
-        attribute: port
-        state: present
-
-    - name: Register variable to check schema.xml file type
-      stat:
-        path: /etc/solr/conf/schema.xml
-      register: default_schema
-
-    - name: Backup default schema file if regular file (not symlink)
-      command: mv /etc/solr/conf/schema.xml /etc/solr/conf/schema.xml.bak
-      when: default_schema.stat.exists and default_schema.stat.isreg
-
-    - name: Symlink to CKAN's schema file
+    - name: Create directory to hold downloaded solr binary release
       file:
-        src: /usr/lib/ckan/default/src/ckan/ckan/config/solr/schema.xml
-        dest: /etc/solr/conf/schema.xml
-        state: link
-        force: true
+        path: "{{ solr_download_dir }}"
+        state: directory
+        mode: 0755
 
-    # Docs use 127.0.0.1 but we actually want localhost so it can use IP6
+    # TODO: come back to this and make it check for executable; for now I'm just checking if
+    # download exists so I don't repeatedly download it. Then, make additional tasks below
+    # skipped if register var already set.
+    - name: Check if solr binary release already downloaded.
+      stat:
+        path: "{{ solr_download_dir }}/{{solr_archive}}"
+      register: st
+
+    - name: Download solr binary release.
+      get_url:
+        url: "https://www.apache.org/dyn/closer.lua/solr/solr/9.11.0/{{ solr_archive }}?action=download"
+        dest: "{{ solr_download_dir }}"
+      when: not st.stat.exists
+
+    - name: Check if solr already installed.
+      stat:
+        path: "/opt/solr/bin/solr"
+      register: solr
+
+    - name: Extract install script
+      command:
+        cmd: "tar xzf {{ solr_archive }} solr-9.11.0/bin/install_solr_service.sh --strip-components=2"
+        chdir: "{{ solr_download_dir }}"
+      when: not solr.stat.exists
+
+    # The script installs it into /opt/solr, but that specific directory is used as option here
+    # in case default behavior changes in future.
+    # Note that this installs into directory that includes version (e.g. /opt/solr-9.11.0/) but
+    # then symlinks /opt/solr to it.
+    - name: Run install script from solr download directory
+      command:
+        cmd: "bash ./install_solr_service.sh {{ solr_archive }} -i /opt/ -f"
+        chdir: "{{ solr_download_dir }}"
+      when: not solr.stat.exists
+
     - name: Update CKAN ini file for solr setting
       ini_file:
-        path: /etc/ckan/default/ckan.ini
+        path: "{{ ckan_ini_path }}"
         section: app:main
         option: solr_url
-        value: http://localhost:8983/solr
-        backup: true
+        value: http://localhost:8983 # without /solr, as suggested by output of `/opt/solr/bin/solr status`
+      notify: restart solr
 
-    - name: Give group write permissions to /var/log/tomcat9 to avoid errors
-      file:
-        path: /var/log/tomcat9
-        recurse: true
-        mode: 0775
   notify: restart solr
 
-- name: Update site_url in ckan ini
-  ini_file:
-    path: "{{ ckan_ini_path }}"
-    section: app:main
-    option: ckan.site_url
-    value: "http{% if use_tls %}s{% endif %}://{{ domain }}"
-    backup: true
+# solr needs to be reloaded here before next set of tasks.
+- name: Flush handlers
+  meta: flush_handlers
+
+# the directory where solr's ckan "collection/core" is gets created by `solr create`. Check
+# if already created (I haven't yet found a better way to check if the collection has
+# already been created)
+- name: Create var on whether collection/core dirs created
+  stat:
+    path: "{{ solr_ckan_core_custom_schema }}"
+  register: solr_collection_dirs
+
+# NOTE: this has to happen after solr running
+- name: Create collection for ckan
+  command: /opt/solr/bin/solr create -c ckan
+  become: true
+  become_user: solr
+  when: not solr_collection_dirs.stat.exists
+
+- name: Download custom solr schema
+  get_url:
+    url: https://raw.githubusercontent.com/ckan/ckan/ckan-2.12.0/ckan/config/solr/schema.xml
+    dest: "{{ solr_ckan_core_custom_schema }}"
+    owner: solr
+    group: solr
+  when: not solr_collection_dirs.stat.exists
+  notify: restart solr
 
 - name: Register var to check if db tables already created
   postgresql_query:
@@ -178,6 +199,32 @@
 - name: Initialize database
   command: "{{ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} db init"
   when: not tables_created.query_result.0.exists
+
+- name: Create sysadmin
+  block:
+    - name: Register output of user list command
+      command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user list"
+      register: user_list
+      changed_when: false
+
+    - name: Register output of sysadmin list command
+      command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} sysadmin list"
+      register: sysadmin_list
+      changed_when: false
+
+    - name: Create user
+      expect:
+        command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user add {{ sysadmin }} email={{ sysadmin_email }} name={{ sysadmin }}"
+        responses:
+          "Password ": "{{ sysadmin_pass }}"
+          "Repeat for confirmation": "{{ sysadmin_pass }}"
+      when: sysadmin not in user_list.stdout
+
+    - name: Make that user a sysadmin
+      command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} sysadmin add {{ sysadmin }}"
+      when: sysadmin not in sysadmin_list.stdout
+  notify: reload ckan
+
 
 - name: Install Datastore plugin
   block:
@@ -201,7 +248,6 @@
         section: app:main
         option: "{{ item.key }}"
         value: "{{ item.value }}"
-        backup: true
       loop: "{{ ini_content | dict2items }}"
       vars:
         ini_content:
@@ -243,11 +289,10 @@
         section: app:main
         option: ckan.storage_path
         value: /var/lib/ckan/default
-        backup: true
       notify: reload ckan
 
 # NOTE: might still have to do additional work to migrate from data pusher, see
-# <ckanext.xloader.formats = csv application/csv xls application/vnd.ms-excel>
+# <https://github.com/ckan/ckanext-xloader/tree/master#upgrading-from-datapusher>
 # In particular, "freeze the column types (in the data dictionaries), so that XLoader doesn't
 # change them back to string on next xload:"
 - name: Install and configure XLoader (officially supported replacement of datapusher)
@@ -294,7 +339,6 @@
         section: app:main
         option: ckanext.xloader.jobs_db.url
         value: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/ckan_default"
-        backup: true
       notify: reload ckan
 
     - name: Update ckan.ini file to include formats to handle
@@ -303,7 +347,6 @@
         section: app:main
         option: ckanext.xloader.formats
         value: "csv xls xlsx tsv application/csv application/vnd.ms-excel application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        backup: true
       notify: reload ckan
 
 
@@ -313,7 +356,6 @@
 #     section: app:main
 #     option: ckan.views.default_views
 #     value: image_view text_view datatables_view
-#     backup: true
 #   notify: reload ckan
 
 - name: Update ckan_default and datastore_default db permissions via script
@@ -329,6 +371,29 @@
     section: app:main
     option: ckan.cors.origin_allow_all
     value: "true"
+  notify: reload ckan
+
+- name: Upload WSGI script
+  copy:
+    src: wsgi.py
+    dest: "{{ ckan_ini_dir }}"
+  notify: reload ckan
+
+- name: Upload uwsgi config file
+  copy:
+    src: ckan-uwsgi.ini
+    dest: "{{ ckan_ini_dir }}"
+  notify: reload ckan
+
+- name: Upload config file for supervisorctl/ckan-uwsgi
+  copy:
+    src: ckan-uwsgi.conf
+    dest: "{{ ckan_ini_dir }}"
+
+- name: Create uwsgi server
+  pip:
+    name: uwsgi
+    virtualenv: "{{ ckan_dir }}"
   notify: reload ckan
 
 # https://docs.ckan.org/en/2.9/maintaining/tracking.html

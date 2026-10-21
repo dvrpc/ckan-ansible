@@ -15,14 +15,14 @@
         name: /usr/lib/ckan/default/src/ckanext-harvest/
         editable: true
         virtualenv: "{{ ckan_dir }}"
-      when: repo.changed or ckan_package.changed
+      when: repo.changed
 
     - name: Install its requirements
       pip:
         chdir: /usr/lib/ckan/default/src/ckanext-harvest/
         requirements: pip-requirements.txt
         virtualenv: "{{ ckan_dir }}"
-      when: repo.changed or ckan_package.changed
+      when: repo.changed
 
     - name: Install redis
       apt:
@@ -74,14 +74,14 @@
         name: /usr/lib/ckan/default/src/ckanext-dcat/
         editable: true
         virtualenv: "{{ ckan_dir }}"
-      when: repo.changed or ckan_package.changed
+      when: repo.changed
 
     - name: Install its requirements
       pip:
         chdir: /usr/lib/ckan/default/src/ckanext-dcat/
         requirements: requirements.txt
         virtualenv: "{{ ckan_dir }}"
-      when: repo.changed or ckan_package.changed
+      when: repo.changed
 
     - name: Add plugins to ckan.ini
       lineinfile:
