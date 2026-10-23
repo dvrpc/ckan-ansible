@@ -61,11 +61,10 @@
       tags: base
     - role: dvrpc_theme
       tags: theme
-    # - scheming
-    # - pdfview
-    # - geoview
-    # - custom_privileges
-    # - showcases
+    - scheming
+    - pdfview
+    - geoview
+    - custom_privileges
 
   tasks:
     - name: Create/renew TLS certificate
@@ -75,17 +74,8 @@
       tags: tls
       when: env == "production"
 
-
     # - name: Set up oauth
     #   include_role:
     #     name: oauth
-
-    # - name: Install harvest extension
-    #   include_role:
-    #     name: harvest
-
-    # - name: Install our custom harvest extension, built on top of other one
-    #   include_role:
-    #     name: dvrpc_gis_harvester
 
 

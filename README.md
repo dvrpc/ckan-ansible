@@ -17,7 +17,7 @@ An initial, one-time playbook has been created to be run as the root user. Run t
 
 It runs the "user" and "hardening" roles, which in general sets up non-root users and hardens the server. These roles are also included in the main playbook that can be run anytime an update is needed.
 
-After setting the variable `update_ckan` to the appropriate setting (`true` the first time you install CKAN, but then generally `false` unless you are explicitly attempting to update the CKAN version), run the main playbook: `ansible-playbook playbook.yml -u <username> -i inventories/<inventory_file>`. 
+After setting the variable `update_ckan` to the appropriate setting (`true` the first time you install CKAN, but then generally `false` unless you are explicitly attempting to update the CKAN version), run the main playbook: `ansible-playbook playbook.yml -u <username> -i inventories/<inventory_file>`.
 
 After the initial setup, the playbook_init.yml does not need to be run again, and so you can run playbook.yml as above anytime a change has been made.
 
@@ -26,7 +26,6 @@ After the initial setup, the playbook_init.yml does not need to be run again, an
 The majority of Data Catalog is stock CKAN or 3rd-party extensions, however we also have several extensions we maintain:
 * https://github.com/dvrpc/ckanext-dvrpc_theme
 * https://github.com/dvrpc/ckanext-oauth2
-* https://github.com/dvrpc/ckanext-dvrpc_gis_harvester
 * https://github.com/dvrpc/ckanext-customuserprivileges
 
 ## Database and Filestore Backup and Restore
@@ -34,10 +33,9 @@ The majority of Data Catalog is stock CKAN or 3rd-party extensions, however we a
 Here is the process for fully backing up and restoring CKAN data (including user data and any oauth tokens). See also <https://docs.ckan.org/en/2.9/maintaining/database-management.html>.
 
 Backup database:
-  1. Clear any harvested datasets first via the web interface - there's no need to back these up or restore them
-  2. `cd` into the directory where you want to save the backups
-  3. `pg_dump -O -F c ckan_default -U ckan_default -h localhost -p 5432 > ckan_default-DATE.pgc` (will be prompted for password)
-  4. `pg_dump -O -F c datastore_default -U ckan_default -h localhost -p 5432 > datastore_default-DATE.pgc` (will be prompted for password)
+  1. `cd` into the directory where you want to save the backups
+  2. `pg_dump -O -F c ckan_default -U ckan_default -h localhost -p 5432 > ckan_default-DATE.pgc` (will be prompted for password)
+  3. `pg_dump -O -F c datastore_default -U ckan_default -h localhost -p 5432 > datastore_default-DATE.pgc` (will be prompted for password)
 
 Backup filestore:
   1. `cd /var/lib/ckan`
