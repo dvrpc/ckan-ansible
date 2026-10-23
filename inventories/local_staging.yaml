@@ -5,5 +5,4 @@ all:
       env: staging
       domain: ckan.local
       update_ckan: true
-      use_tls: false
       dvrpc_git_branch: development

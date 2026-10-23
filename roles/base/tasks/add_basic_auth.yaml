@@ -19,6 +19,6 @@
     path: /etc/nginx/.htpasswd
     owner: root
     group: www-data
-    mode: 0640
+    mode: '0640'
     name: "{{ protected_user }}"
     password: "{{ protected_pass }}"

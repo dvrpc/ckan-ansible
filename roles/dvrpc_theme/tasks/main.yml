@@ -20,20 +20,21 @@
   file:
     path: /ssh_keys
     state: directory
-    mode: 0755
+    mode: '0755'
 
 # the public key was added to the repo's deploy keys
 - name: Copy private ssh deploy key to server
   copy:
     src: files/ckan_dvrpc_theme_repo
     dest: /ssh_keys/ckan_dvrpc_theme_repo
-    mode: 0600
+    mode: '0600'
 
 - name: Clone our theme plugin repo
   git:
     repo: git@github.com:dvrpc/ckanext-dvrpc_theme
     dest: "{{ ckan_dir }}/src/ckanext-dvrpc_theme/"
-    version: "{{ dvrpc_git_branch }}"
+    # version: "{{ dvrpc_git_branch }}"
+    version: ckan-2.12-update
     accept_hostkey: true
     key_file: /ssh_keys/ckan_dvrpc_theme_repo
   register: repo
@@ -44,41 +45,9 @@
     editable: true
     virtualenv: "{{ ckan_dir }}"
   when: repo.changed
-  notify: reload ckan
-
-- name: Register var to check if category already added
-  community.general.xml:
-    path: "{{ solr_ckan_core_custom_schema }}"
-    xpath: /schema/fields/field[@name="category"]
-    count: true
-  register: category_field
-
-- name: Make category a multi-value field
-  xml:
-    path: "{{ solr_ckan_core_custom_schema }}"
-    xpath: /schema/fields
-    add_children:
-      - field:
-          name: "category"
-          type: "string"
-          indexed: "true"
-          stored: "true"
-          multiValued: "true"
-    pretty_print: true
-  when: category_field.count < 1
   notify:
-    - restart solr
-    - rebuild solr index
-
-- name: Change field from text to string type
-  xml:
-    path: "{{ solr_ckan_core_custom_schema }}"
-    xpath: /schema/fields/dynamicField[@name='res_extras_*']
-    attribute: type
-    value: string
-  notify:
-    - restart solr
-    - rebuild solr index
+    - reload ckan
+    - generate js translations
 
 - name: Update ckan.ini (excluding plugin list)
   ini_file:

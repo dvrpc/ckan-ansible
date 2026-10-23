@@ -1,0 +1,21 @@
+# From <https://docs.ansible.com/projects/ansible/latest/collections/community/crypto/docsite/guide_selfsigned.html>
+
+- name: Generate an OpenSSL private key with the default values (4096 bits, RSA) and a passphrase
+  community.crypto.openssl_privatekey:
+    path: "/etc/ssl/private/{{ domain }}.pem"
+
+- name: Create simple self-signed certificate
+  community.crypto.x509_certificate:
+    path: "/etc/ssl/private/{{ domain }}.crt"
+    privatekey_path: "/etc/ssl/private/{{ domain }}.pem"
+    provider: selfsigned
+
+- name: Copy nginx config to server (for self-signed https)
+  template:
+    src: https_self_signed_nginx.conf.j2
+    dest: "/etc/nginx/conf.d/{{ domain }}.conf"
+    owner: root
+    group: root
+    mode: '0640'
+  notify: reload nginx
+

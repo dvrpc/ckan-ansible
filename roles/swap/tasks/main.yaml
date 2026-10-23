@@ -18,7 +18,7 @@
 - name: Restrict swapfile permissions
   file:
     path: /swapfile
-    mode: 0600
+    mode: '0600'
 
 - name: Turn it on if not already on
   command: swapon /swapfile

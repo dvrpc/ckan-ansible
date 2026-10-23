@@ -25,12 +25,12 @@
     dest: /etc/ssh/sshd_config.d/
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: reload sshd
 
 - name: Configure fail2ban
   copy:
     src: jail.local
     dest: /etc/fail2ban/jail.local
-    mode: 0644
+    mode: '0644'
   notify: restart fail2ban

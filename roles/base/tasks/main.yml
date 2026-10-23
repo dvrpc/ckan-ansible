@@ -4,17 +4,19 @@
   apt:
     name:
       - libpq5
-      - redis-server
       - nginx
+      - redis-server
       - supervisor
       # these ones required for installation from source, but not package
-      - python3-dev
-      - libpq-dev
-      - python3-pip
-      - python3-venv
       - git-core
       - libmagic1
+      - libpq-dev
+      - libpcre3
+      - libpcre3-dev
       - postfix
+      - python3-dev
+      - python3-pip
+      - python3-venv
     state: present
 
 - name: Install CKAN from source into virtual environment
@@ -23,6 +25,7 @@
     virtualenv: "{{ ckan_dir }}"
     virtualenv_command: "python3 -m venv"
   register: ckan_package
+  notify: generate js translations
 
 - name: Install further dependencies
   pip:
@@ -39,6 +42,11 @@
     path: "{{ ckan_ini_dir }}"
     state: directory
 
+- name: Make directory for logs
+  file:
+    path: /var/log/ckan
+    state: directory
+
 - name: Upload initial version of CKAN ini file, which will be modified by other tasks.
   template:
     src: ckan.ini.j2
@@ -50,17 +58,32 @@
     path: "{{ ckan_ini_path }}"
     section: app:main
     option: ckan.site_url
-    # TODO: check if a better way to do this is used in cloud-ansible (scheme?)
-    value: "http{% if use_tls %}s{% endif %}://{{ domain }}"
+    value: "https://{{ domain }}"
 
-# This is what plugins (before datastore?) we previously started with
-# - name: Update plugins in ckan.ini
-#   ini_file:
-#     path: "{{ ckan_ini_path }}"
-#     section: app:main
-#     option: ckan.plugins
-#     value: stats datatables_view image_view datapusher resource_proxy
-#   notify: reload ckan
+- name: Create writeable directory available to CKAN
+  file:
+    path: /var/lib/ckan/default
+    state: directory
+    owner: www-data
+    group: www-data
+    # the 's' here is for the setuid/setgid and ensures future dirs/files have same owner/group
+    mode: 'ug+ws'
+
+- name: Add that path to ckan ini
+  ini_file:
+    path: "{{ ckan_ini_path }}"
+    section: app:main
+    option: ckan.storage_path
+    value: /var/lib/ckan/default
+  notify: reload ckan
+
+- name: Change template permissions
+  file:
+    path: /usr/lib/ckan/default/src/ckan/ckan/public/base
+    owner: www-data
+    group: www-data
+    recurse: yes
+
 - name: Install and configure postgres
   block:
     - name: Install postgres
@@ -112,7 +135,7 @@
       file:
         path: "{{ solr_download_dir }}"
         state: directory
-        mode: 0755
+        mode: '0755'
 
     # TODO: come back to this and make it check for executable; for now I'm just checking if
     # download exists so I don't repeatedly download it. Then, make additional tasks below
@@ -159,13 +182,15 @@
 
   notify: restart solr
 
-# solr needs to be reloaded here before next set of tasks.
+# Solr needs to be started if this was initial installation of it, in order to run next
+# set of tasks.
 - name: Flush handlers
   meta: flush_handlers
+  when: not solr.stat.exists
 
-# the directory where solr's ckan "collection/core" is gets created by `solr create`. Check
-# if already created (I haven't yet found a better way to check if the collection has
-# already been created)
+# The directory where solr's ckan "collection/core" is gets created by `solr create` above. Check
+# if already created. (I haven't yet found a better way to check if the collection has already been
+# created and then to create it if not.)
 - name: Create var on whether collection/core dirs created
   stat:
     path: "{{ solr_ckan_core_custom_schema }}"
@@ -178,13 +203,14 @@
   become_user: solr
   when: not solr_collection_dirs.stat.exists
 
-- name: Download custom solr schema
-  get_url:
-    url: https://raw.githubusercontent.com/ckan/ckan/ckan-2.12.0/ckan/config/solr/schema.xml
+# NOTE: this is the CKAN custom schema, as of CKAN 2.12, and further modified (noted in file
+# by comment starting with "DVRPC:".)
+- name: Upload custom solr schema
+  copy:
+    src: managed-schema.xml
     dest: "{{ solr_ckan_core_custom_schema }}"
     owner: solr
     group: solr
-  when: not solr_collection_dirs.stat.exists
   notify: restart solr
 
 - name: Register var to check if db tables already created
@@ -225,7 +251,6 @@
       when: sysadmin not in sysadmin_list.stdout
   notify: reload ckan
 
-
 - name: Install Datastore plugin
   block:
     - name: Create database
@@ -262,7 +287,9 @@
         backrefs: true
         regexp: "^(?!.* datastore)(ckan.plugins =.*)"
         line: '\1 datastore'
-      notify: reload ckan
+      notify:
+        - reload ckan
+        - generate js translations
 
     - name: Create tables and set permissions
       shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
@@ -275,29 +302,12 @@
 #     name: flask_login
 #     version: 0.6.0
 
-- name: Configure filestore
-  block:
-    - name: Create directory
-      file:
-        path: /var/lib/ckan/default
-        state: directory
-        mode: 0774
-
-    - name: Add storage path to ckan ini
-      ini_file:
-        path: "{{ ckan_ini_path }}"
-        section: app:main
-        option: ckan.storage_path
-        value: /var/lib/ckan/default
-      notify: reload ckan
-
 # NOTE: might still have to do additional work to migrate from data pusher, see
 # <https://github.com/ckan/ckanext-xloader/tree/master#upgrading-from-datapusher>
 # In particular, "freeze the column types (in the data dictionaries), so that XLoader doesn't
 # change them back to string on next xload:"
 - name: Install and configure XLoader (officially supported replacement of datapusher)
   block:
-
     - name: Install Xloader into CKAN virtual environment
       pip:
         name: ckanext-xloader
@@ -314,20 +324,14 @@
         backrefs: true
         regexp: "^(?!.* xloader)(ckan.plugins =.*)"
         line: '\1 xloader'
-      notify: reload ckan
+      notify:
+        - reload ckan
+        - generate js translations
 
     - name: Check if API token already made for Xloader
       command:
         cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user token list default"
       register: xloader_token
-
-    - name: View register var
-      debug:
-        msg: "{{ xloader_token.stdout }}"
-
-    - name: View register var
-      debug:
-        msg: "{{ xloader_token.stdout.find('xloader') }}"
 
     - name: Create token for Xloader
       shell: "{{ ckan_dir }}/bin/ckan config-tool {{ ckan_ini_path }} ckanext.xloader.api_token=$({{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user token add default xloader | tail -n 1 | tr -d '\t')"
@@ -379,22 +383,55 @@
     dest: "{{ ckan_ini_dir }}"
   notify: reload ckan
 
-- name: Upload uwsgi config file
-  copy:
-    src: ckan-uwsgi.ini
-    dest: "{{ ckan_ini_dir }}"
+- name: Upload uwsgi server config file
+  template:
+    src: ckan-uwsgi.ini.j2
+    dest: "{{ ckan_ini_dir }}/ckan-uwsgi.ini"
   notify: reload ckan
 
-- name: Upload config file for supervisorctl/ckan-uwsgi
-  copy:
-    src: ckan-uwsgi.conf
-    dest: "{{ ckan_ini_dir }}"
+- name: Upload supervisor config file for uwsgi
+  template:
+    src: ckan-uwsgi.conf.j2
+    dest: /etc/supervisor/conf.d/ckan-uwsgi.conf
+
+- name: Upload supervisor config file for ckan background worker
+  template:
+    src: ckan-worker.conf.j2
+    dest: /etc/supervisor/conf.d/ckan-worker.conf
 
 - name: Create uwsgi server
   pip:
     name: uwsgi
     virtualenv: "{{ ckan_dir }}"
   notify: reload ckan
+
+- name: Configure nginx
+  block:
+    - name: Copy template nginx config to server
+      template:
+        src: http_nginx.conf.j2
+        dest: "/etc/nginx/conf.d/{{ domain }}.conf"
+        owner: root
+        group: root
+        mode: '0640'
+        force: false
+      notify: reload nginx
+
+    - name: Rm sites-enabled/sites-available folders
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/nginx/sites-available
+        - /etc/nginx/sites-enabled
+
+    - name: Create/renew TLS certificate
+      include_tasks: tls_cert.yaml
+      when: env == "production"
+
+    - name: Create/renew self-signed TLS certificate
+      include_tasks: tls_cert_self_signed.yaml
+      when: env != "production"
 
 # https://docs.ckan.org/en/2.9/maintaining/tracking.html
 - name: Add page view tracking, including email notification
@@ -419,7 +456,7 @@
       copy:
         src: dataset_tracking_total.sh
         dest: ~/dataset_tracking_total.sh
-        mode: 0755
+        mode: '0755'
       become: true
       become_user: postgres
 
@@ -427,7 +464,7 @@
       copy:
         src: dataset_tracking_recent.sh
         dest: ~/dataset_tracking_recent.sh
-        mode: 0755
+        mode: '0755'
       become: true
       become_user: postgres
 
@@ -453,9 +490,3 @@
       become: true
       become_user: postgres
 
-- name: Change template permissions
-  file:
-    path: /usr/lib/ckan/default/src/ckan/ckan/public/base
-    owner: www-data
-    group: www-data
-    recurse: yes

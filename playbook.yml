@@ -32,6 +32,10 @@
     - name: reload ckan
       command: supervisorctl reload
 
+    - name: generate js translations
+      command:
+        cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} translation js"
+
   pre_tasks:
     - name: Update apt cache
       apt: update_cache=yes cache_valid_time=3600
@@ -55,8 +59,8 @@
       tags: hardening
     - role: base
       tags: base
-    # - role: dvrpc_theme
-    #   tags: theme
+    - role: dvrpc_theme
+      tags: theme
     # - scheming
     # - pdfview
     # - geoview
@@ -64,19 +68,13 @@
     # - showcases
 
   tasks:
-    - name: Set up nginx without TLS
+    - name: Create/renew TLS certificate
       include_role:
         name: base
-        tasks_from: nginx_no_tls
-      when: not use_tls
+        tasks_from: tls_cert.yaml
+      tags: tls
+      when: env == "production"
 
-    - name: Set up nginx with TLS
-      include_role:
-        name: base
-        tasks_from: nginx_tls
-      tags:
-        - tls
-      when: use_tls
 
     # - name: Set up oauth
     #   include_role:

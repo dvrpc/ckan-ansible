@@ -5,5 +5,4 @@ all:
       env: production
       domain: catalog.dvrpc.org
       update_ckan: false
-      use_tls: true
       dvrpc_git_branch: main
