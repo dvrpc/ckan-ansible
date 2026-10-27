@@ -174,7 +174,7 @@ attribute with the form `ckan-X.Y` -->
     <dynamicField name="res_extras_*" type="string" indexed="true" stored="true" multiValued="true"/>
     <dynamicField name="vocab_*" type="string" indexed="true" stored="true" multiValued="true"/>
     <dynamicField name="*" type="string" indexed="true"  stored="false"/>
-    <!-- DVRPC: category filed addedkjl -->
+    <!-- DVRPC: category filed added -->
     <field name="category" type="string" indexed="true" stored="true" multiValued="true"/>
 </fields>
 

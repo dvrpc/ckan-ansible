@@ -1,5 +1,8 @@
 ---
 # tasks to install CKAN with only base plugins (datastore, filestore, datapusher)
+- name: Include secret vars
+  include_vars: secrets.yaml
+
 - name: Install required system packages
   apt:
     name:
@@ -121,7 +124,6 @@
         option: sqlalchemy.url
         value: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/ckan_default"
 
-
 # <https://docs.ckan.org/en/2.12/maintaining/installing/install-from-source.html#setup-solr>
 # <https://solr.apache.org/guide/solr/9_11/deployment-guide/installing-solr.html>
 - name: Install and configure solr
@@ -177,7 +179,7 @@
         path: "{{ ckan_ini_path }}"
         section: app:main
         option: solr_url
-        value: http://localhost:8983 # without /solr, as suggested by output of `/opt/solr/bin/solr status`
+        value: http://localhost:8983/solr/ckan
       notify: restart solr
 
   notify: restart solr
@@ -211,7 +213,25 @@
     dest: "{{ solr_ckan_core_custom_schema }}"
     owner: solr
     group: solr
+  register: solr_schema
   notify: restart solr
+
+- name: Remove solr default managed schema
+  file:
+    path: /opt/solr/server/solr/configsets/_default/conf/managed-schema.xml
+    state: absent
+
+- name: Create symbolic link to ckan solr schema we just uploaded
+  file:
+    src: "{{ solr_ckan_core_custom_schema }}"
+    dest: /opt/solr/server/solr/configsets/_default/conf/managed-schema.xml
+    state: link
+  register: managed_schema
+  notify: restart solr
+
+- name: Flush handlers
+  meta: flush_handlers
+  when: solr_schema.changed or managed_schema.changed
 
 - name: Register var to check if db tables already created
   postgresql_query:
@@ -295,6 +315,10 @@
       shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
       when: datastore_database.changed
   notify: reload ckan
+
+# NOTE: this needs to precede Xloader installation and any other plugins that may alter db.
+- name: Restore databases/files (if new backup/files uploaded)
+  include_tasks: db_files_restore.yaml
 
 # - name: Install v0.6.0 of flask-login to fix compatibility issues
 #   pip:
@@ -490,3 +514,4 @@
       become: true
       become_user: postgres
 
+# TODO: cronjob for regular backups (and export to linux4) if not already being done.

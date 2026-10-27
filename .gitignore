@@ -7,6 +7,12 @@ config
 ansible.cfg
 vms/*.img
 
+# ignore pg db dumps
+roles/base/files/*.pgc
+# ignore filestore archive
+roles/base/files/*.tar.gz
+
+
 # staging environment
 staging/*.qcow2
 staging/*.img

@@ -1,0 +1,71 @@
+- name: Create directory to contain the backup
+  file:
+    path: /usr/local/ckan_dbs/
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0755
+
+# this is from a -Fc (custom format) dump, but the postgresql_db module
+# doesn't recognize the conventional .dump file extension, so .pgc used instead
+- name: Upload ckan_default db backup
+  become_user: postgres
+  copy:
+    src: "{{ ckan_default_db_backup }}"
+    dest: "/usr/local/ckan_dbs/{{ ckan_default_db_backup }}"
+    mode: '0750'
+  register: ckan_db
+
+- name: Upload datastore_default db backup
+  become_user: postgres
+  copy:
+    src: "{{ datastore_default_db_backup }}"
+    dest: "/usr/local/ckan_dbs/{{ datastore_default_db_backup }}"
+    mode: '0750'
+  register: datastore_db
+
+- name: Upload filestore backup
+  become_user: postgres
+  copy:
+    src: "{{ filestore_backup }}"
+    dest: "/usr/local/ckan_dbs/{{ filestore_backup }}"
+    mode: '0750'
+  register: filestore_uploaded
+
+- name: Clean existing database
+  command:
+    cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db clean --yes"
+  when: ckan_db.changed
+
+- name: Restore ckan_default db
+  become_user: postgres
+  postgresql_db:
+    name: "ckan_default"
+    state: restore
+    target: "/usr/local/ckan_dbs/{{ ckan_default_db_backup }}"
+    owner: postgres
+  when: ckan_db.changed
+  notify: rebuild solr index
+
+- name: Restore datastore_default db
+  become_user: postgres
+  postgresql_db:
+    name: "ckan_default"
+    state: restore
+    target: "/usr/local/ckan_dbs/{{ datastore_default_db_backup }}"
+    owner: postgres
+  when: datastore_db.changed
+
+- name: Upgrade db
+  command:
+    cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db upgrade"
+  when: upgrade_db
+  notify: rebuild solr index
+
+- name: Restore files
+  unarchive:
+    src: "/usr/local/ckan_dbs/{{ filestore_backup }}"
+    dest: /var/lib/ckan/default
+    remote_src: true
+  when: filestore_uploaded.changed
+  notify: reload ckan

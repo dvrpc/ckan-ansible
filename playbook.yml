@@ -28,6 +28,7 @@
 
     - name: rebuild solr index
       command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} search-index rebuild"
+      ignore_errors: true
 
     - name: reload ckan
       command: supervisorctl reload
