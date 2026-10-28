@@ -27,7 +27,7 @@
     name: git+https://github.com/ckan/ckan.git@ckan-2.12.0#egg=ckan[requirements]
     virtualenv: "{{ ckan_dir }}"
     virtualenv_command: "python3 -m venv"
-  register: ckan_package
+  when: upgrade_ckan
   notify: generate js translations
 
 - name: Install further dependencies
@@ -87,13 +87,13 @@
     group: www-data
     recurse: yes
 
-- name: Install and configure postgres
-  block:
-    - name: Install postgres
-      apt:
-        name: postgresql
-        state: present
+- name: Install postgres
+  apt:
+    name: postgresql
+    state: present
 
+- name: Create ckan_default db/roles
+  block:
     - name: Create db user
       become: true
       become_user: postgres
@@ -123,6 +123,7 @@
         section: app:main
         option: sqlalchemy.url
         value: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/ckan_default"
+
 
 # <https://docs.ckan.org/en/2.12/maintaining/installing/install-from-source.html#setup-solr>
 # <https://solr.apache.org/guide/solr/9_11/deployment-guide/installing-solr.html>
@@ -190,49 +191,6 @@
   meta: flush_handlers
   when: not solr.stat.exists
 
-# The directory where solr's ckan "collection/core" is gets created by `solr create` above. Check
-# if already created. (I haven't yet found a better way to check if the collection has already been
-# created and then to create it if not.)
-- name: Create var on whether collection/core dirs created
-  stat:
-    path: "{{ solr_ckan_core_custom_schema }}"
-  register: solr_collection_dirs
-
-# NOTE: this has to happen after solr running
-- name: Create collection for ckan
-  command: /opt/solr/bin/solr create -c ckan
-  become: true
-  become_user: solr
-  when: not solr_collection_dirs.stat.exists
-
-# NOTE: this is the CKAN custom schema, as of CKAN 2.12, and further modified (noted in file
-# by comment starting with "DVRPC:".)
-- name: Upload custom solr schema
-  copy:
-    src: managed-schema.xml
-    dest: "{{ solr_ckan_core_custom_schema }}"
-    owner: solr
-    group: solr
-  register: solr_schema
-  notify: restart solr
-
-- name: Remove solr default managed schema
-  file:
-    path: /opt/solr/server/solr/configsets/_default/conf/managed-schema.xml
-    state: absent
-
-- name: Create symbolic link to ckan solr schema we just uploaded
-  file:
-    src: "{{ solr_ckan_core_custom_schema }}"
-    dest: /opt/solr/server/solr/configsets/_default/conf/managed-schema.xml
-    state: link
-  register: managed_schema
-  notify: restart solr
-
-- name: Flush handlers
-  meta: flush_handlers
-  when: solr_schema.changed or managed_schema.changed
-
 - name: Register var to check if db tables already created
   postgresql_query:
     db: ckan_default
@@ -242,9 +200,59 @@
     query: "SELECT EXISTS ( SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user');"
   register: tables_created
 
+# NOTE: If the datastore plugin is included in list, but the datastore_default db/role doesn't
+# not yet exist, this will fail. If any manual changes have been made related to datastore,
+# ensure they either all exist or all do not exist.
 - name: Initialize database
   command: "{{ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} db init"
   when: not tables_created.query_result.0.exists
+
+- name: Further configure solr
+  block:
+    # The directory where solr's ckan "collection/core" is gets created by `solr create` above.
+    # Check if already created. (I haven't yet found a better way to check if the collection has
+    # already been created and then to create it if not.)
+    - name: Create var on whether collection/core dirs created
+      stat:
+        path: "{{ solr_ckan_core_custom_schema }}"
+      register: solr_collection_dirs
+
+    # NOTE: this has to happen after solr running
+    - name: Create collection for ckan
+      command: /opt/solr/bin/solr create -c ckan
+      become: true
+      become_user: solr
+      when: not solr_collection_dirs.stat.exists
+
+    # NOTE: this is the CKAN custom schema, as of CKAN 2.12, and further modified (noted in file
+    # by comment starting with "DVRPC:").
+    - name: Upload custom solr schema
+      copy:
+        src: managed-schema.xml
+        dest: "{{ solr_ckan_core_custom_schema }}"
+        owner: solr
+        group: solr
+      register: solr_schema
+      notify: restart solr
+
+    - name: Remove solr default managed schema
+      file:
+        path: /opt/solr/server/solr/configsets/_default/conf/managed-schema.xml
+        state: absent
+      when: solr_schema.changed
+
+    - name: Create symbolic link to ckan solr schema we just uploaded
+      file:
+        src: "{{ solr_ckan_core_custom_schema }}"
+        dest: /opt/solr/server/solr/configsets/_default/conf/managed-schema.xml
+        state: link
+      register: managed_schema
+      notify: restart solr
+
+- name: Flush handlers
+  meta: flush_handlers
+  when: solr_schema.changed or managed_schema.changed
+
 
 - name: Create sysadmin
   block:
@@ -320,12 +328,6 @@
 - name: Restore databases/files (if new backup/files uploaded)
   include_tasks: db_files_restore.yaml
 
-# - name: Install v0.6.0 of flask-login to fix compatibility issues
-#   pip:
-#     virtualenv: /usr/lib/ckan/datapusher
-#     name: flask_login
-#     version: 0.6.0
-
 # NOTE: might still have to do additional work to migrate from data pusher, see
 # <https://github.com/ckan/ckanext-xloader/tree/master#upgrading-from-datapusher>
 # In particular, "freeze the column types (in the data dictionaries), so that XLoader doesn't
@@ -356,6 +358,7 @@
       command:
         cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user token list default"
       register: xloader_token
+      changed_when: false
 
     - name: Create token for Xloader
       shell: "{{ ckan_dir }}/bin/ckan config-tool {{ ckan_ini_path }} ckanext.xloader.api_token=$({{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} user token add default xloader | tail -n 1 | tr -d '\t')"
@@ -386,12 +389,6 @@
 #     value: image_view text_view datatables_view
 #   notify: reload ckan
 
-- name: Update ckan_default and datastore_default db permissions via script
-  command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions"
-  when: ckan_package.changed
-  notify:
-    - reload nginx
-    - reload ckan
 
 - name: CORS - allow all origins
   ini_file:

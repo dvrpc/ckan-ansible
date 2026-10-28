@@ -2,4 +2,7 @@
 ckan_default_db_backup: ckan_default-2026-10-23.pgc
 datastore_default_db_backup: datastore_default-2026-10-23.pgc
 filestore_backup: filestore-2026-10-26.tar.gz
-upgrade_db: true
+
+# Change these on the command line - not here- when needed. They should always be 'false' here.
+upgrade_ckan: false
+upgrade_db: false

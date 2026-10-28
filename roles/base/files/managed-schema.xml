@@ -176,6 +176,11 @@ attribute with the form `ckan-X.Y` -->
     <dynamicField name="*" type="string" indexed="true"  stored="false"/>
     <!-- DVRPC: category filed added -->
     <field name="category" type="string" indexed="true" stored="true" multiValued="true"/>
+    <!-- DVRPC: user_agreement is too large for "string", which seems that it defaults to. Error
+    suggested changing to text_general, but this caused another error. Setting indexed=false skips
+    indexing it altogether - which is fine, it's not something we need to index - and doesn't cause
+    an error. -->
+    <field name="user_agreement" type="text_general" indexed="false" stored="false"/>
 </fields>
 
 <uniqueKey>index_id</uniqueKey>

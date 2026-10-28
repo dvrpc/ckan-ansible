@@ -17,9 +17,23 @@ An initial, one-time playbook has been created to be run as the root user. Run t
 
 It runs the "user" and "hardening" roles, which in general sets up non-root users and hardens the server. These roles are also included in the main playbook that can be run anytime an update is needed.
 
-After setting the variable `update_ckan` to the appropriate setting (`true` the first time you install CKAN, but then generally `false` unless you are explicitly attempting to update the CKAN version), run the main playbook: `ansible-playbook playbook.yml -u <username> -i inventories/<inventory_file>`.
+Then run the main playbook: `ansible-playbook playbook.yml -u <username> -i inventories/<inventory_file>`.
 
 After the initial setup, the playbook_init.yml does not need to be run again, and so you can run playbook.yml as above anytime a change has been made.
+
+### CKAN and Database Upgrades
+
+Two variables control whether we try to update the CKAN version and the database schema:
+  - upgrade_ckan
+  - upgrade_db
+
+Both are set in the base role's vars file to false. These are mostly dummy values to allow the plays to run (because the variable is used, but we want to only specify it deliberately on the command line).
+
+When needed, set either or both to true on the command line (note that these examples exclude necessary parameters like inventories):
+  - `ansible-playbook playbook.yml --extra_vars="upgrade_ckan=true"`
+  - `ansible-playbook playbook.yml --extra_vars="upgrade_db=true"`
+
+As they are included in the base role, that tag can also be passed to limit only to that role (`--tag base`).
 
 ## DVRPC-maintained extensions
 
@@ -30,7 +44,9 @@ The majority of Data Catalog is stock CKAN or 3rd-party extensions, however we a
 
 ## Database and Filestore Backup and Restore
 
-Here is the process for fully backing up and restoring CKAN data (including user data and any oauth tokens). See also <https://docs.ckan.org/en/2.9/maintaining/database-management.html>.
+Database (both ckan_default and datastore_default) and filestore restore is built into this playbook (in roles/base/tasks/db_files_restore.yaml). Restore will only be done if the associated backups were not previously on the server and have just been uploaded.
+
+Here is the method to create new backups for restoring:
 
 Backup database:
   1. `cd` into the directory where you want to save the backups
@@ -41,16 +57,4 @@ Backup filestore:
   1. `cd /var/lib/ckan`
   2. `tar -czf filestore-DATE.tar.gz default/`
 
-Restore database:
-  1. Do this locally first on a test machine so as to ensure the integrity of the data - the process involves wiping everything from the existing database
-  2. `cd` into directory where you placed/uploaded the backups
-  3. Activate the CKAN virtual environment: `source /usr/lib/ckan/default/bin/activate`
-  4. Wipe the existing database: `ckan -c /etc/ckan/default/ckan.ini db clean`
-  5. `sudo -u postgres pg_restore --clean --if-exists -d ckan_default < ckan_default-DATE.pgc`
-  6. `sudo -u postgres pg_restore --clean --if-exists -d datastore_default < datastore_default-DATE.pgc`
-  7. rebuild the solr index: `ckan -c /etc/ckan/default/ckan.ini tracking update && ckan -c /etc/ckan/default/ckan.ini search-index rebuild -r`
-
-Restore Filestore:
-  1. `cd var/lib/ckan`
-  2. Make a copy of the local directory: `mv default/ default-bk/`
-  3. untar the archive: `tar -xf filestore-DATE.tar.gz`
+Also see <https://docs.ckan.org/en/2.12/maintaining/database-management.html>.

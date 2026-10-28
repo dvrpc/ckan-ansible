@@ -68,6 +68,7 @@
     - custom_privileges
 
   tasks:
+    # NOTE: When in staging environment, a self-signed cert is issued.
     - name: Create/renew TLS certificate
       include_role:
         name: base
@@ -75,8 +76,9 @@
       tags: tls
       when: env == "production"
 
-    # - name: Set up oauth
-    #   include_role:
-    #     name: oauth
+    - name: Set up oauth
+      include_role:
+        name: oauth
+      when: env == "production"
 
 

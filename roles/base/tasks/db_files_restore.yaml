@@ -1,6 +1,6 @@
-- name: Create directory to contain the backup
+- name: Create directory to contain the backups
   file:
-    path: /usr/local/ckan_dbs/
+    path: /usr/local/ckan_restore/
     state: directory
     owner: postgres
     group: postgres
@@ -12,7 +12,7 @@
   become_user: postgres
   copy:
     src: "{{ ckan_default_db_backup }}"
-    dest: "/usr/local/ckan_dbs/{{ ckan_default_db_backup }}"
+    dest: "/usr/local/ckan_restore/{{ ckan_default_db_backup }}"
     mode: '0750'
   register: ckan_db
 
@@ -20,7 +20,7 @@
   become_user: postgres
   copy:
     src: "{{ datastore_default_db_backup }}"
-    dest: "/usr/local/ckan_dbs/{{ datastore_default_db_backup }}"
+    dest: "/usr/local/ckan_restore/{{ datastore_default_db_backup }}"
     mode: '0750'
   register: datastore_db
 
@@ -28,7 +28,7 @@
   become_user: postgres
   copy:
     src: "{{ filestore_backup }}"
-    dest: "/usr/local/ckan_dbs/{{ filestore_backup }}"
+    dest: "/usr/local/ckan_restore/{{ filestore_backup }}"
     mode: '0750'
   register: filestore_uploaded
 
@@ -37,24 +37,73 @@
     cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db clean --yes"
   when: ckan_db.changed
 
+- name: Drop all connections to database so we can drop it
+  become_user: postgres
+  command: psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='ckan_default';"
+  when: ckan_db.changed
+
+- name: Drop ckan database
+  become_user: postgres
+  postgresql_db:
+    name: ckan_default
+    state: absent
+  when: ckan_db.changed
+
+- name: Create ckan_default database
+  become_user: postgres
+  postgresql_db:
+    name: ckan_default
+    owner: ckan_default
+    state: present
+
 - name: Restore ckan_default db
   become_user: postgres
   postgresql_db:
-    name: "ckan_default"
+    name: ckan_default
     state: restore
-    target: "/usr/local/ckan_dbs/{{ ckan_default_db_backup }}"
+    target: "/usr/local/ckan_restore/{{ ckan_default_db_backup }}"
     owner: postgres
   when: ckan_db.changed
   notify: rebuild solr index
 
+- name: Drop all connections to database so we can drop it
+  become_user: postgres
+  command: psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='datastore_default';"
+  when: datastore_db.changed
+
+- name: Drop datastore database
+  become_user: postgres
+  postgresql_db:
+    name: datastore_default
+    state: absent
+  when: datastore_db.changed
+
+- name: Create datastore database
+  become_user: postgres
+  postgresql_db:
+    name: datastore_default
+    state: present
+
 - name: Restore datastore_default db
   become_user: postgres
   postgresql_db:
-    name: "ckan_default"
+    name: "datastore_default"
     state: restore
-    target: "/usr/local/ckan_dbs/{{ datastore_default_db_backup }}"
+    target: "/usr/local/ckan_restore/{{ datastore_default_db_backup }}"
     owner: postgres
   when: datastore_db.changed
+
+- name: Update ckan_default and datastore_default db permissions via script
+  command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions"
+  when: datastore_db.changed
+
+- name: Restore files
+  unarchive:
+    src: "/usr/local/ckan_restore/{{ filestore_backup }}"
+    dest: /var/lib/ckan/default
+    remote_src: true
+  when: filestore_uploaded.changed
+  notify: reload ckan
 
 - name: Upgrade db
   command:
@@ -62,10 +111,3 @@
   when: upgrade_db
   notify: rebuild solr index
 
-- name: Restore files
-  unarchive:
-    src: "/usr/local/ckan_dbs/{{ filestore_backup }}"
-    dest: /var/lib/ckan/default
-    remote_src: true
-  when: filestore_uploaded.changed
-  notify: reload ckan
