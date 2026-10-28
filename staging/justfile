@@ -110,7 +110,7 @@ create: destroy _generate_network_definition _generate_cloud_init_files
           --cloud-init user-data=./cloud_init_${vms[i]}.yaml,disable=on \
           --connect {{ connection }} \
           --network network={{ network }} \
-          --osinfo="${os[i]}" \
+          --osinfo detect=on,require=off \
           --import \
           --noautoconsole
     done
@@ -216,6 +216,10 @@ _dl-latest-os-images:
             url=https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
         elif [ ${os} = "debian11" ]; then
             url=https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-amd64.qcow2
+        elif [ ${os} = "ubuntu26.10" ]; then
+            url=https://cloud-images.ubuntu.com/stonking/current/stonking-server-cloudimg-amd64.img
+        elif [ ${os} = "ubuntu26.04" ]; then
+            url=https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-amd64.img
         elif [ ${os} = "ubuntu25.10" ]; then
             url=https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img
         elif [ ${os} = "ubuntu25.04" ]; then
@@ -259,6 +263,16 @@ _cp-img-for-vms: _dl-latest-os-images
         elif [ ${os[i]} = "debian11" ]; then
             sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
             sudo virt-resize --expand /dev/sda1 debian-11-generic-amd64.qcow2 "${vms[i]}.qcow2"
+        elif [ ${os[i]} = "ubuntu26.10" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 stonking-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
+        elif [ ${os[i]} = "ubuntu26.04" ]; then
+            sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
+            sudo virt-resize --expand /dev/sda1 resolute-server-cloudimg-amd64.img "${vms[i]}.qcow2"
+            # For the ubuntus, we need to reinstall grub too
+            sudo virt-customize -a "${vms[i]}.qcow2" --run-command 'grub-install /dev/sda'
         elif [ ${os[i]} = "ubuntu25.10" ]; then
             sudo qemu-img create -f qcow2 "${vms[i]}.qcow2" "${size[i]}G"
             sudo virt-resize --expand /dev/sda1 questing-server-cloudimg-amd64.img "${vms[i]}.qcow2"
