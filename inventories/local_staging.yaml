@@ -4,5 +4,4 @@ all:
       ansible_host: 192.168.110.10
       env: staging
       domain: ckan.local
-      update_ckan: true
       dvrpc_git_branch: development
