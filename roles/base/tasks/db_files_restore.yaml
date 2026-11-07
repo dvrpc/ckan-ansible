@@ -16,14 +16,6 @@
     mode: '0750'
   register: ckan_db
 
-- name: Upload datastore_default db backup
-  become_user: postgres
-  copy:
-    src: "{{ datastore_default_db_backup }}"
-    dest: "/usr/local/ckan_restore/{{ datastore_default_db_backup }}"
-    mode: '0750'
-  register: datastore_db
-
 - name: Upload filestore backup
   become_user: postgres
   copy:
@@ -62,48 +54,19 @@
     name: ckan_default
     state: restore
     target: "/usr/local/ckan_restore/{{ ckan_default_db_backup }}"
-    owner: postgres
+    owner: ckan_default
   when: ckan_db.changed
   notify: rebuild solr index
-
-- name: Drop all connections to database so we can drop it
-  become_user: postgres
-  command: psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='datastore_default';"
-  when: datastore_db.changed
-
-- name: Drop datastore database
-  become_user: postgres
-  postgresql_db:
-    name: datastore_default
-    state: absent
-  when: datastore_db.changed
-
-- name: Create datastore database
-  become_user: postgres
-  postgresql_db:
-    name: datastore_default
-    state: present
-
-- name: Restore datastore_default db
-  become_user: postgres
-  postgresql_db:
-    name: "datastore_default"
-    state: restore
-    target: "/usr/local/ckan_restore/{{ datastore_default_db_backup }}"
-    owner: postgres
-  when: datastore_db.changed
-
-- name: Update ckan_default and datastore_default db permissions via script
-  command: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions"
-  when: datastore_db.changed
 
 - name: Restore files
   unarchive:
     src: "/usr/local/ckan_restore/{{ filestore_backup }}"
-    dest: /var/lib/ckan/default
+    dest: /var/lib/ckan/
     remote_src: true
   when: filestore_uploaded.changed
-  notify: reload ckan
+  notify:
+    - submit datasets
+    - reload ckan
 
 - name: Upgrade db
   command:

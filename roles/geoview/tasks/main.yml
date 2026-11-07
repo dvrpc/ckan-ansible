@@ -23,12 +23,11 @@
   notify: reload ckan
 
 - name: Add to default resource views
-  ini_file:
-    path: /etc/ckan/default/ckan.ini
-    section: app:main
-    option: ckan.views.default_views
-    value: image_view text_view datatables_view pdf_view geojson_view
-    backup: true
+  lineinfile:
+    path: "{{ ckan_ini_path }}"
+    backrefs: true
+    regexp: "^(?!.* geojson_view)(ckan.views.default_views = .*)"
+    line: '\1 geojson_view'
   notify: reload ckan
 
 # add map style changes for geojson previewer

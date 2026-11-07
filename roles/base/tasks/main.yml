@@ -92,6 +92,48 @@
     name: postgresql
     state: present
 
+- name: Configure database and reload settings
+  community.postgresql.postgresql_alter_system:
+    param: "{{ item.key }}"
+    value: "{{ item.value }}"
+    login_port: "5432"
+  become: true
+  become_user: postgres
+  loop:
+    "{{ conf_data | dict2items }}"
+  vars:
+    conf_data:
+      password_encryption: "{{ password_encryption }}"
+      shared_buffers: "{{ shared_buffers }}"
+      effective_cache_size: "{{ effective_cache_size }}"
+      maintenance_work_mem: "{{ maintenance_work_mem }}"
+      checkpoint_completion_target: "{{ checkpoint_completion_target }}"
+      default_statistics_target: "{{ default_statistics_target }}"
+      random_page_cost: "{{ random_page_cost }}"
+      effective_io_concurrency: "{{ effective_io_concurrency }}"
+      work_mem: "{{ work_mem }}"
+      huge_pages: "{{ huge_pages }}"
+      jit: "{{ jit }}"
+      min_wal_size: "{{ min_wal_size }}"
+      max_wal_size: "{{ max_wal_size }}"
+  notify: "reload postgres"
+
+- name: Configure database and restart
+  community.postgresql.postgresql_alter_system:
+    param: "{{ item.key }}"
+    value: "{{ item.value }}"
+    login_port: "5432"
+  become: true
+  become_user: postgres
+  loop:
+    "{{ conf_data | dict2items }}"
+  vars:
+    conf_data:
+      listen_addresses: "*"
+      max_connections: "{{ max_connections }}"
+      wal_buffers: "{{ wal_buffers }}"
+  notify: "restart postgres"
+
 - name: Create ckan_default db/roles
   block:
     - name: Create db user
@@ -253,7 +295,6 @@
   meta: flush_handlers
   when: solr_schema.changed or managed_schema.changed
 
-
 - name: Create sysadmin
   block:
     - name: Register output of user list command
@@ -287,6 +328,7 @@
         owner: ckan_default
       become_user: postgres
       register: datastore_database
+      notify: set datastore permissions
 
     - name: Create database user
       postgresql_user:
@@ -319,25 +361,24 @@
         - reload ckan
         - generate js translations
 
-    - name: Create tables and set permissions
-      shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
-      when: datastore_database.changed
   notify: reload ckan
+
+# permissions need to be set on datastore/ckan databases
+- name: Flush handlers
+  meta: flush_handlers
+  when: datastore_database.changed
 
 # NOTE: this needs to precede Xloader installation and any other plugins that may alter db.
 - name: Restore databases/files (if new backup/files uploaded)
   include_tasks: db_files_restore.yaml
 
-# NOTE: might still have to do additional work to migrate from data pusher, see
-# <https://github.com/ckan/ckanext-xloader/tree/master#upgrading-from-datapusher>
-# In particular, "freeze the column types (in the data dictionaries), so that XLoader doesn't
-# change them back to string on next xload:"
 - name: Install and configure XLoader (officially supported replacement of datapusher)
   block:
     - name: Install Xloader into CKAN virtual environment
       pip:
         name: ckanext-xloader
         virtualenv: /usr/lib/ckan/default
+      notify: reload ckan
 
     - name: Install further dependencies
       pip:
@@ -379,16 +420,6 @@
         option: ckanext.xloader.formats
         value: "csv xls xlsx tsv application/csv application/vnd.ms-excel application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       notify: reload ckan
-
-
-# - name: Define default resource views
-#   ini_file:
-#     path: "{{ ckan_ini_path }}"
-#     section: app:main
-#     option: ckan.views.default_views
-#     value: image_view text_view datatables_view
-#   notify: reload ckan
-
 
 - name: CORS - allow all origins
   ini_file:
@@ -448,11 +479,11 @@
 
     - name: Create/renew TLS certificate
       include_tasks: tls_cert.yaml
-      when: env == "production"
+      when: env in ["production", "staging"]
 
     - name: Create/renew self-signed TLS certificate
       include_tasks: tls_cert_self_signed.yaml
-      when: env != "production"
+      when: env == "local staging"
 
 # https://docs.ckan.org/en/2.9/maintaining/tracking.html
 - name: Add page view tracking, including email notification

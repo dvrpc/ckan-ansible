@@ -37,6 +37,25 @@
       command:
         cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} translation js"
 
+    - name: reload postgres
+      service:
+        name: postgresql
+        state: reloaded
+        enabled: true
+
+    - name: restart postgres
+      service:
+        name: postgresql
+        state: restarted
+        enabled: true
+
+    - name: submit datasets
+      command:
+        cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} xloader submit all"
+
+    - name: set datastore permissions
+      shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
+
   pre_tasks:
     - name: Update apt cache
       apt: update_cache=yes cache_valid_time=3600
@@ -68,17 +87,17 @@
     - custom_privileges
 
   tasks:
-    # NOTE: When in staging environment, a self-signed cert is issued.
+    # NOTE: When in "local staging" environment, a self-signed cert is issued.
     - name: Create/renew TLS certificate
       include_role:
         name: base
         tasks_from: tls_cert.yaml
       tags: tls
-      when: env == "production"
+      when: env in ["production", "staging"]
 
-    - name: Set up oauth
-      include_role:
-        name: oauth
-      when: env == "production"
+    # - name: Set up oauth
+    #   include_role:
+    #     name: oauth
+    #   when: env in ["production", "staging"]
 
 
