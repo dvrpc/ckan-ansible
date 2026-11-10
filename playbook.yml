@@ -1,7 +1,8 @@
 ---
 # This playbook to be run after playbook_init has been run once, and then can be run on its
 # own anytime changes need to be made.
-- hosts: ckan
+- name: Deploy CKAN
+  hosts: ckan
   become: true
 
   vars:
@@ -92,12 +93,15 @@
       include_role:
         name: base
         tasks_from: tls_cert.yaml
+        apply:
+          tags: tls
       tags: tls
       when: env in ["production", "staging"]
 
-    # - name: Set up oauth
-    #   include_role:
-    #     name: oauth
-    #   when: env in ["production", "staging"]
-
-
+    - name: Set up oauth
+      include_role:
+        name: oauth
+        apply:
+          tags: oauth
+      tags: oauth
+      when: env in ["production", "staging"]

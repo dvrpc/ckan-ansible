@@ -1,9 +1,22 @@
 ---
+- name: Include vars
+  include_vars: secrets_2.09_production.yaml
+  when: domain == "catalog.dvrpc.org"
+
+- name: Include vars
+  include_vars: secrets_2.09_staging.yaml
+  when: domain == "staging-catalog.cloud.dvrpc.org"
+
+- name: Include vars
+  include_vars: secrets_2.12_staging.yaml
+  when: domain == "ckan2.12-staging.cloud.dvrpc.org"
+
 - name: Clone our oauth plugin repo
   git:
     repo: https://github.com/dvrpc/ckanext-oauth2.git
     dest: /usr/lib/ckan/default/src/ckanext-oauth2
-    version: "{{ dvrpc_git_branch }}"
+    version: ckan2.12
+    # version: "{{ dvrpc_git_branch }}"
     accept_hostkey: true
   register: repo
 
@@ -25,8 +38,8 @@
   loop:
     - {option: "ckan.oauth2.authorization_endpoint", value: "{{ authorization_endpoint }}"}
     - {option: "ckan.oauth2.token_endpoint", value: "{{ token_endpoint }}"}
-    - {option: "ckan.oauth2.client_id", value: "{{ client_id if (env == 'production') else  staging_client_id }}" }
-    - {option: "ckan.oauth2.client_secret", value: "{{ client_secret if (env == 'production') else staging_client_secret }}"}
+    - {option: "ckan.oauth2.client_id", value: "{{ client_id }}"}
+    - {option: "ckan.oauth2.client_secret", value: "{{ client_secret }}"}
     - {option: "ckan.oauth2.scope", value: "{{ scope }}"}
     - {option: "ckan.oauth2.profile_api_url", value: "{{ profile_api_url }}"}
     - {option: "ckan.oauth2.profile_api_user_field", value: "{{ profile_api_user_field }}"}
