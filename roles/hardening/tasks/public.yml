@@ -1,15 +1,5 @@
 ---
 # further hardening for public servers
-- name: Allow http/s through firewall
-  ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: tcp
-  loop:
-    - 80
-    - 443
-  notify: reload ufw
-
 - name: Deny all other incoming access
   ufw:
     state: enabled

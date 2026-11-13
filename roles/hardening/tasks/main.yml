@@ -25,10 +25,16 @@
     proto: tcp
   notify: reload ufw
 
+- name: Allow http/s through firewall
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 80
+    - 443
+  notify: reload ufw
+
 - name: Hardening
   include_tasks: public.yml
   when: env in ["production", "staging"]
-
-- name: Hardening
-  include_tasks: private.yml
-  when: env == "development"
