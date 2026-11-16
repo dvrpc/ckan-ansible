@@ -6,8 +6,6 @@
     group: postgres
     mode: 0755
 
-# this is from a -Fc (custom format) dump, but the postgresql_db module
-# doesn't recognize the conventional .dump file extension, so .pgc used instead
 - name: Upload ckan_default db backup
   become_user: postgres
   copy:
@@ -16,6 +14,14 @@
     mode: '0750'
   register: ckan_db
 
+- name: Upload datastore_default db backup
+  become_user: postgres
+  copy:
+    src: "{{ datastore_default_db_backup }}"
+    dest: "/usr/local/ckan_restore/{{ datastore_default_db_backup }}"
+    mode: '0750'
+  register: datastore_db
+
 - name: Upload filestore backup
   become_user: postgres
   copy:
@@ -23,11 +29,6 @@
     dest: "/usr/local/ckan_restore/{{ filestore_backup }}"
     mode: '0750'
   register: filestore_uploaded
-
-- name: Clean existing database
-  command:
-    cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db clean --yes"
-  when: ckan_db.changed
 
 - name: Drop all connections to database so we can drop it
   become_user: postgres
@@ -58,6 +59,39 @@
   when: ckan_db.changed
   notify: rebuild solr index
 
+- name: Drop all connections to database so we can drop it
+  become_user: postgres
+  command: psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='datastore_default';"
+  when: datastore_db.changed
+
+- name: Drop datastore database
+  become_user: postgres
+  postgresql_db:
+    name: datastore_default
+    state: absent
+  when: datastore_db.changed
+
+- name: Create datastore_default database
+  become_user: postgres
+  postgresql_db:
+    name: datastore_default
+    owner: ckan_default
+    state: present
+
+- name: Restore datastore_default db
+  become_user: postgres
+  postgresql_db:
+    name: datastore_default
+    state: restore
+    target: "/usr/local/ckan_restore/{{ datastore_default_db_backup }}"
+    owner: ckan_default
+    target_opts: "-j6"
+  when: datastore_db.changed
+  notify: rebuild solr index
+
+- name: set datastore permissions
+  shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
+
 - name: Restore files
   unarchive:
     src: "/usr/local/ckan_restore/{{ filestore_backup }}"
@@ -65,8 +99,8 @@
     remote_src: true
   when: filestore_uploaded.changed
   notify:
-    - submit datasets
     - reload ckan
+    # - submit datasets
 
 - name: Upgrade db
   command:
@@ -74,3 +108,7 @@
   when: upgrade_db
   notify: rebuild solr index
 
+# - name: submit datasets
+#   command:
+#     cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} xloader submit all"
+#   when: filestore_uploaded.changed

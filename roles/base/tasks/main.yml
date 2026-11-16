@@ -421,6 +421,23 @@
         value: "csv xls xlsx tsv application/csv application/vnd.ms-excel application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       notify: reload ckan
 
+    - name: Update ckan.ini file to guess formats
+      ini_file:
+        path: "{{ ckan_ini_path }}"
+        section: app:main
+        option: ckanext.xloader.use_type_guessing
+        value: "true"
+      notify: reload ckan
+
+    - name: Update ckan.ini file to not verify ssl when local
+      ini_file:
+        path: "{{ ckan_ini_path }}"
+        section: app:main
+        option: ckanext.xloader.ssl_verify
+        value: "false"
+      notify: reload ckan
+      when: env not in ["production", "staging"]
+
 - name: CORS - allow all origins
   ini_file:
     path: "{{ ckan_ini_path }}"
