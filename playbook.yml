@@ -59,12 +59,6 @@
     - name: set datastore permissions
       shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
 
-    # - name: Add comments, which contain data dictionary fields, from database dump.
-    #   become_user: postgres
-    #   shell: "pg_restore -l {{ datastore_default_db_backup }} > datastore.toc && grep COMMENT datastore.toc > datastore.comments.toc && pg_restore -L datastore.comments.toc -d datastore_default {{ datastore_default_db_backup }}"
-    #   args:
-    #     chdir: /usr/local/ckan_restore
-
   pre_tasks:
     - name: Update apt cache
       apt: update_cache=yes cache_valid_time=3600

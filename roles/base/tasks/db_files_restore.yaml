@@ -100,15 +100,9 @@
   when: filestore_uploaded.changed
   notify:
     - reload ckan
-    # - submit datasets
+    - submit datasets
 
 - name: Upgrade db
-  command:
-    cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db upgrade"
+  shell: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db upgrade && {{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} datastore upgrade"
   when: upgrade_db
   notify: rebuild solr index
-
-# - name: submit datasets
-#   command:
-#     cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} xloader submit all"
-#   when: filestore_uploaded.changed
