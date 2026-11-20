@@ -80,6 +80,8 @@
       tags: users
     - role: hardening
       tags: hardening
+    - role: swap
+      tags: swap
     - role: base
       tags: base
     - role: dvrpc_theme

@@ -30,8 +30,8 @@ Two variables control whether we try to update the CKAN version and the database
 Both are set in the base role's vars file to false. These are mostly dummy values to allow the plays to run (because the variable is used, but we want to only specify it deliberately on the command line).
 
 When needed, set either or both to true on the command line (note that these examples exclude necessary parameters like inventories):
-  - `ansible-playbook playbook.yml --extra_vars="upgrade_ckan=true"`
-  - `ansible-playbook playbook.yml --extra_vars="upgrade_db=true"`
+  - `ansible-playbook playbook.yml --extra-vars="upgrade_ckan=true"`
+  - `ansible-playbook playbook.yml --extra-vars="upgrade_db=true"`
 
 As they are included in the base role, that tag can also be passed to limit only to that role (`--tag base`).
 
