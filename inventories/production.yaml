@@ -1,7 +1,7 @@
 all:
   hosts:
     ckan:
-      ansible_host: 142.93.70.150
+      ansible_host: 24.144.105.105
       env: production
       domain: catalog.dvrpc.org
       dvrpc_git_branch: main

@@ -11,11 +11,6 @@
       - python3-lxml # required for the ansible module community.general.xml
     state: present
 
-# - name: Install dependencies into virtual environment
-#   pip:
-#     name: lxml
-    # virtualenv: "{{ ckan_dir }}"
-
 - name: Create directory to put ssh keys into
   file:
     path: /ssh_keys
@@ -33,8 +28,7 @@
   git:
     repo: git@github.com:dvrpc/ckanext-dvrpc_theme
     dest: "{{ ckan_dir }}/src/ckanext-dvrpc_theme/"
-    # version: "{{ dvrpc_git_branch }}"
-    version: ckan-2.12-update
+    version: "{{ dvrpc_git_branch }}"
     accept_hostkey: true
     key_file: /ssh_keys/ckan_dvrpc_theme_repo
   register: repo

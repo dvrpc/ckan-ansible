@@ -1,6 +1,6 @@
 ---
 - name: Include vars
-  include_vars: secrets_2.09_production.yaml
+  include_vars: secrets_production.yaml
   when: domain == "catalog.dvrpc.org"
 
 - name: Include vars
@@ -15,8 +15,7 @@
   git:
     repo: https://github.com/dvrpc/ckanext-oauth2.git
     dest: /usr/lib/ckan/default/src/ckanext-oauth2
-    version: ckan2.12
-    # version: "{{ dvrpc_git_branch }}"
+    version: "{{ dvrpc_git_branch }}"
     accept_hostkey: true
   register: repo
 

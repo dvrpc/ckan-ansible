@@ -50,12 +50,6 @@
         state: restarted
         enabled: true
 
-    # NOTE that this merely creates background jobs, it takes much longer
-    # to actually store the datasets into the datastore_default db
-    - name: submit datasets
-      command:
-        cmd: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} xloader submit all"
-
     - name: set datastore permissions
       shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
 

@@ -98,9 +98,7 @@
     dest: /var/lib/ckan/
     remote_src: true
   when: filestore_uploaded.changed
-  notify:
-    - reload ckan
-    - submit datasets
+  notify: reload ckan
 
 - name: Upgrade db
   shell: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db upgrade && {{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} datastore upgrade"
