@@ -347,7 +347,7 @@
         ini_content:
           ckan.datastore.write_url: "postgresql://ckan_default:{{ ckan_default_db_pass }}@localhost/datastore_default"
           ckan.datastore.read_url: "postgresql://datastore_default:{{ datastore_default_db_pass }}@localhost/datastore_default"
-          ckan.datastore.sqlsearch.enabled: false
+          ckan.datastore.sqlsearch.enabled: true
       notify: reload ckan
 
     - name: Add plugin to ckan.plugins setting if not already in it
@@ -370,6 +370,17 @@
 # NOTE: this needs to precede Xloader installation and any other plugins that may alter db.
 - name: Restore databases/files (if new backup/files uploaded)
   include_tasks: db_files_restore.yaml
+
+- name: Enable activity plugin
+  lineinfile:
+    path: "{{ ckan_ini_path }}"
+    backrefs: true
+    regexp: "^(?!.* activity)(ckan.plugins =.*)"
+    line: '\1 activity'
+  notify:
+    - reload ckan
+    - generate js translations
+    - upgrade db activity
 
 - name: Install and configure XLoader (officially supported replacement of datapusher)
   block:

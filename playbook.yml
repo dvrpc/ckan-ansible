@@ -53,6 +53,9 @@
     - name: set datastore permissions
       shell: "{{ ckan_dir}}/bin/ckan -c {{ ckan_ini_path }} datastore set-permissions | sudo -u postgres psql --set ON_ERROR_STOP=1"
 
+    - name: upgrade db activity
+      shell: "{{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db upgrade && {{ ckan_dir }}/bin/ckan -c {{ ckan_ini_path }} db upgrade -p activity"
+
   pre_tasks:
     - name: Update apt cache
       apt: update_cache=yes cache_valid_time=3600
